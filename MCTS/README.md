@@ -1,16 +1,15 @@
 ## Monte-Carlo Tree Search for Tic-Tac-Toe  
 MCTS is a popular planning algorithm which was widely used in Game AI.
-Vanilla MCTS randomly picks an action when it
+Vanilla MCTS randomly picks an action when building search tree. UCT1 instead uses UCB algorithm to select action. For more details about UCB and UCT1, refer MCTS survey in Reference.  
 
 ## Tic-Tac-Toe
-Here we use MCTS to play an variation of classic Tic-Tac-Toe called 'Ultimate Tic-Tac-Toe'.   
+Here we use UCT1 to play an variation of classic Tic-Tac-Toe called 'Ultimate Tic-Tac-Toe'.   
 See [this post]( http://mathwithbaddrawings.com/2013/06/16/ultimate-tic-tac-toe/ ) for details about the game.  
-The implementations of the game borrows from [this repo](https://github.com/jbradberry/ultimate_tictactoe)  
+The implementations of the game borrows from [this repo](https://github.com/jbradberry/ultimate_tictactoe).    
 
 ## Screenshot  
-AI is thinking...  
-<img src="https://github.com/borgwang/toys/raw/master/MCTS/mcts.png" width = "300" height = "450" alt="mcts" align=center />  
+<img src="https://github.com/borgwang/toys/raw/master/MCTS/mcts.png" width = "300" height = "430" alt="mcts" align=center />  
 
 ## Reference  
-[MCTS survey](http://pubs.doc.ic.ac.uk/survey-mcts-methods/survey-mcts-methods.pdf)  
-[Jeff Bradberry's post](http://jeffbradberry.com/posts/2015/09/intro-to-monte-carlo-tree-search/)  
+* [MCTS survey](http://pubs.doc.ic.ac.uk/survey-mcts-methods/survey-mcts-methods.pdf)  
+* [Jeff Bradberry's post](http://jeffbradberry.com/posts/2015/09/intro-to-monte-carlo-tree-search/)  
