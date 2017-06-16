@@ -1,6 +1,6 @@
 ## Cross-Entropy Method
 
-Cross-entropy method is a derivative-free policy optimize approach. It simply sample some policies, pick some good ones(elite policies) and update current policy, ignoring all other information other than **rewards** collected during episode.
+Cross-entropy method is a derivative-free policy optimize approach. It simply sample some policies in policy space, pick some good ones(elite policies) and move current policy towards elite policies, ignoring all other information other than **rewards** collected during episodes.
 
 ## Requirements
 * python 2.7  
