@@ -9,7 +9,7 @@ The implementations of the game borrows from [this repo](https://github.com/jbra
 
 ## Screenshot  
 AI is thinking...  
-<img src="https://github.com/borgwang/toys/raw/master/MCTS/mcts.png" width = "400" height = "580" alt="mcts" align=center />  
+<img src="https://github.com/borgwang/toys/raw/master/MCTS/mcts.png" width = "300" height = "450" alt="mcts" align=center />  
 
 ## Reference  
 [MCTS survey](http://pubs.doc.ic.ac.uk/survey-mcts-methods/survey-mcts-methods.pdf)  
