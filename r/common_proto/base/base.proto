@@ -1,0 +1,104 @@
+syntax = "proto3"
+
+package base
+
+
+message ItemIdSchema {
+  string field_name = 1;
+}
+
+message SourceFeatureType {
+  enum Type {
+    TYPE_UNKNOWN = 0;
+    TYPE_NUMERIC = 1;
+    TYPE_IMAGE = 2;
+  }
+}
+
+message PreProcessType {
+  enum Type {
+    TYPE_UNKNOWN = 0;
+    TYPE_NORMALIZE = 1;
+    TYPE_SCALE = 2;
+    TYPE_TRANSFORM = 3;
+  }
+}
+
+message PreProcessSchema {
+  string field_name = 1;
+  repeated PreProcessType.Type pre_process_type = 2;
+}
+
+message FeatureSchema {
+  SourceFeatureType.Type feature_type = 1;
+
+  // common value item
+  int32 feature_nums = 2;
+  repeated string file_name = 3;
+  repeated PreProcessSchema pre_process_schema = 4;
+
+  // image item
+  int32 height = 5;
+  int32 width = 6;
+  int32 channel = 7;
+
+}
+
+message LabelSchema {
+  string field_name = 1;
+  repeated string label_category = 2;
+}
+
+message JobType {
+  enum Type {
+    TYPE_UNKNOWN = 0;
+    TYPE_TRAIN_JOB = 1;
+    TYPE_PREDICT_JOB = 2;
+    TYPE_ANALYSIS = 3;
+  }
+}
+
+message ReaderType {
+  enum Type {
+    TYPE_UNKNOWN = 0;
+    TYPE_CSV_READER = 1;
+    TYPE_PB_READER = 2;
+    TYPE_NUMPY_READER = 3;
+    TYPE_IMAGE_READER = 4;
+  }
+}
+
+message MlLib {
+  enum Name {
+    NAME_UNKNOWN = 0;
+    NAME_TENSORFLOW = 1;
+    NAME_SKLEARN = 2;
+  }
+}
+
+message Algorithm {
+  enum Name {
+    NAME_UNKNOWN = 0;
+    NAME_DNN_C = 1;
+    NAME_DNN_R = 2;
+    NAME_CNN_C = 3
+    NAME_CNN_R = 4;
+    NAME_SVM = 5;
+    NAME_DT = 6;
+    NAME_LR = 7;
+    NAME_NB = 8;
+  }
+}
+
+message EvaluateType {
+  enum Type {
+    TYPE_UNKNOWN = 0;
+    TYPE_ACC_MEAN = 1;
+    TYPE_PRECISION_EACH = 2;
+    TYPE_RECALL_EACH = 3;
+    TYPE_F1_EACH = 4;
+    TYPE_AUC = 5;
+    TYPE_MSE = 6;
+    TYPE_R2 = 7;
+  }
+}

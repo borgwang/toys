@@ -1,1 +1,10 @@
 syntax = "proto3";
+
+package service;
+
+import "common_proto/train/train_job.proto";
+
+service MLService {
+  rpc init_train_job(train.TrainJob) returns (train.TrainResponse) {}
+  rpc start_train(train.TrainJobId) returns (train.TrainResponse) {}
+}

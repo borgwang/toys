@@ -1,0 +1,94 @@
+// Copyright (c) 2009 IW. All Rights Reserved.
+// Author: linquan@chuangxin.com (linquan)
+// Date: 17/5/31
+
+syntax = "proto3";
+
+package train;
+
+import "common_proto/base/base.proto";
+
+
+message SVMKernelType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_POLY = 1;
+        TYPE_RBF = 2;
+        TYPE_SIGMOID = 3;
+    }
+}
+
+message KernelSVC {
+    float c = 1;  // Penalty parameter C of the error term.
+    SVMKernelType.Type kernel_type = 2;
+    int32 poly_degree = 3;  // Exists if kernel is poly.
+    float gamma = 4;  // Parameter of the kernel.
+    float coef0 = 5;  // Independent term in kernel function.
+    float stop_threshold = 6;
+    int32 max_iter = 7;
+    base.MultiClassDecisionType.Type multi_class_decision_type = 8;
+}
+
+message SVMLossType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_HINGE = 1;
+        TYPE_SQUARED_HINGE = 2;
+    }
+}
+
+message SVMPenaltyType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_L1 = 1;
+        TYPE_L2 = 2;
+    }
+}
+
+message LinearSVC {
+    float c = 1;  // Penalty parameter C of the error term.
+    SVMLossType.Type loss_type = 2;
+    SVMPenaltyType.Type penalty_type = 3;
+    float stop_threshold = 4;
+    int32 max_iter = 5;
+    base.MultiClassDecisionType.Type multi_class_decision_type = 6;
+}
+
+message SVMLearningRateType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+         // learn_rate = eta0
+        TYPE_CONSTANT = 1;
+        // learn_rate = eta0 / pow(t, power_t)
+        TYPE_INV_SCALING = 2;
+        // learn_rate = 1.0 / (alpha * (t + t0)).
+        // t0 is chosen by a heuristic proposed by Leon Bottou.
+        TYPE_OPTIMAL = 3;
+    }
+}
+
+message SgdSVC {
+    SVMLossType.Type loss_type = 1;
+    SVMPenaltyType.Type penalty_type = 2;
+    SVMLearningRateType.Type learning_rate_type = 3;
+    float alpha = 4;
+    float eta0 = 5;
+    float power_t = 6;
+    int32 batch_size = 7;
+}
+
+message SVMModelType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_KERNEL_SVC = 1;
+        TYPE_LINEAR_SVC = 2;
+        TYPE_SGD_SVC = 3;
+    }
+}
+
+message SVMModel {
+    SVMModelType.Type svm_model_type = 1;
+    KernelSVC kernel_svc = 2;
+    LinearSVC linear_svc = 3;
+    SgdSVC sgd_svc = 4;
+}

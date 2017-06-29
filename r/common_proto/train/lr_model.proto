@@ -1,0 +1,78 @@
+// Copyright (c) 2009 Sinovation Ventures.
+// All rights reserved.
+//
+// Author: hanming <muyoumuou@gmail.com>
+// Date:   17-6-7
+
+syntax = "proto3";
+
+package train;
+
+message LRPenaltyType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_L1 = 1;
+        TYPE_L2 = 2;
+        TYPE_ELASTICNET = 3;
+    }
+}
+
+message LRSolverType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_NEWTON_CG = 1;
+        TYPE_LBFGS = 2;
+        TYPE_LIBLINEAR = 3;
+        TYPE_SAG = 4;
+    }
+}
+
+message LRMultiClassType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_OVR = 1;
+        TYPE_MULTINOMIAL = 2;
+    }
+}
+
+message LRLearningRateType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_CONSTANT = 1;
+        TYPE_OPTIMAL = 2;
+        TYPE_INVSCALING = 3;
+    }
+}
+
+message LR {
+    LRPenaltyType.Type penalty_type = 1;
+    float c = 2; //inverse of regularization strength;
+    int32 max_iter = 3;
+    LRSolverType.Type solver_type = 4;
+    float stop_threshold = 5; //tol in sklearn
+    LRMultiClassType.Type multi_class_type = 6;
+
+}
+
+message SgdLR {
+    LRPenaltyType.Type penalty_type = 1;
+    LRLearningRateType.Type learning_rate_type = 2;
+    float alpha = 3;
+    float eta0 = 4;
+    double power_t = 5;
+    int32 batch_size = 6;
+}
+
+message LRModelType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_LR = 1;
+        TYPE_SGD_LR = 2;
+    }
+}
+
+message LRModel {
+    LRModelType.Type lr_model_type = 1;
+    LR lr = 2;
+    SgdLR sgd_lr = 3;
+}

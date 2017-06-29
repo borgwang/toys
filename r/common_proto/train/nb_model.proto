@@ -1,0 +1,31 @@
+// Copyright (c) 2009 Sinovation Ventures.
+// All rights reserved.
+//
+// Author: hanming <muyoumuou@gmail.com>
+// Date:   17-6-14
+
+syntax = "proto3";
+
+package train;
+
+message GaussianNB {}
+
+message MultinomialNB {}
+
+message BernoulliNB {}
+
+message NBModelType {
+    enum Type {
+        TYPE_UNKNOWN = 0;
+        TYPE_GAUSSIANNB = 1;
+        TYPE_MULTINOMIALNB = 2;
+        TYPE_BERNOULLI = 3;
+    }
+}
+
+message NBModel {
+    NBModelType.Type nb_model_type = 1;
+    GaussianNB gaussian_nb = 2;
+    MultinomialNB multinomial_nb= 3;
+    BernoulliNB bernoulli_nb = 4;
+}
