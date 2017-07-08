@@ -1,3 +1,5 @@
+from __future__ import division
+
 import numpy as np
 from agent import Agent
 import os
@@ -8,7 +10,8 @@ class User(object):
     def __init__(self, uid, enter_prob, stay_prob, tip_prob):
         self.num_host = 5
         self.uid = uid
-        self.enter_prob = enter_prob
+        self.enter_prob = np.array(enter_prob)
+        self.counter = np.array(self.enter_prob* 500, dtype=int)
         self.stay_prob = stay_prob
         self.tip_prob = tip_prob
         self.history = []
@@ -45,8 +48,9 @@ class User(object):
         rec = self.recommender.act(self.__gen_state(self.history))
         # update enter prob
         if np.random.random() < self.enter_prob[rec]:
-            self.enter_prob -= 0.002
-            self.enter_prob[rec] += 0.01
+            self.counter[rec] += 1
+            self.enter_prob = self.counter / np.sum(self.counter)
+            print self.enter_prob
         # print self.enter_prob
 
         room = np.random.choice(np.arange(5), p=self.enter_prob)
@@ -67,7 +71,6 @@ class User(object):
             return False
 
     def __leave_room(self, rec, room, tip, room_time):
-        self.rec_history.append(rec)
         state = self.__gen_state(self.history)
         self.history.append([room, tip, room_time])
         next_state = self.__gen_state(self.history)
