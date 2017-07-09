@@ -5,7 +5,7 @@ from collections import deque
 import random
 
 
-class Agent(object):
+class RLAgent(object):
     def __init__(self):
         self.state_dim = 15
         self.action_dim = 5
@@ -55,7 +55,6 @@ class Agent(object):
                 update_list.append(update_op)
             self.update_target_network = tf.group(*update_list)
 
-
     def act(self, state):
         self.global_step += 1
         # epsilon greedy policy
@@ -65,7 +64,6 @@ class Agent(object):
             state = np.ravel(state).reshape(1,-1)
             output_q = self.sess.run(self.output_q, {self.state_input: state})[0]
             return np.argmax(output_q)
-            # return output_q.argsort()[-3:][::-1]
 
     def random_act(self, state):
         return np.random.randint(self.action_dim)
@@ -78,10 +76,9 @@ class Agent(object):
 
         self.replay_buffer.append([state, onehot_action, reward, next_state, done])
         if len(self.replay_buffer) > self.batch_size:
-            self.__update_model()
+            self._update_model()
 
-    def __update_model(self):
-
+    def _update_model(self):
         if self.global_step % self.target_network_update_interval == 0:
             self.sess.run(self.update_target_network)
 
