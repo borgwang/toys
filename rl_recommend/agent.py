@@ -9,9 +9,9 @@ class Agent(object):
     def __init__(self):
         self.state_dim = 15
         self.action_dim = 5
-        self.epsilon = 0.01
+        self.epsilon = 0.5
         self.final_epsilon = 0.01
-        self.delta_epsilon = (self.epsilon - self.final_epsilon) / 1e5
+        self.delta_epsilon = (self.epsilon - self.final_epsilon) / 5e5
         self.construct_model()
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
@@ -67,7 +67,7 @@ class Agent(object):
             return np.argmax(output_q)
             # return output_q.argsort()[-3:][::-1]
 
-    def random_act(self):
+    def random_act(self, state):
         return np.random.randint(self.action_dim)
 
     def update(self, state, action, reward, next_state, done):
@@ -94,7 +94,7 @@ class Agent(object):
         next_state_action = np.argmax(self.sess.run(self.output_q, {self.state_input: b_ns}), 1)
         next_state_max_q = next_state_all_q[np.arange(self.batch_size), next_state_action]
 
-        b_target_q = b_r + 0.9 * next_state_max_q
+        b_target_q = b_r + 0.99 * next_state_max_q
 
         self.sess.run(self.train, {
             self.state_input: b_s,

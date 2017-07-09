@@ -7,85 +7,61 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class User(object):
-    def __init__(self, uid, enter_prob, stay_prob, tip_prob):
-        self.num_host = 5
-        self.uid = uid
-        self.enter_prob = np.array(enter_prob)
-        self.counter = np.array(self.enter_prob* 500, dtype=int)
-        self.stay_prob = stay_prob
-        self.tip_prob = tip_prob
+    def __init__(self, popularity, favor, earning_ability):
+        # enter_prob is determined by room popularity and user favor.
+        # tip_prob is determined by the earning_ability of a romm and user favor.
+        # The weights of two these factors suppose to be different for different users.
+        self.enter_prob = popularity * 0.3 + favor * 0.7
+        self.tip_prob = earning_ability * 0.3 + favor * 0.7
+        self.stay_prob = np.array(favor)
+
         self.history = []
+
         self.recommender = Agent()
-
-        softmax_enter_prob = self.softmax(self.enter_prob)
-        self.coefficient = softmax_enter_prob / np.mean(softmax_enter_prob)
         self.running_tip = None
-        self.avg_reward = np.mean(-(np.log(1 - np.asarray(enter_prob)) + np.log(1 - np.array(stay_prob))))
-
-        self.global_step = 0
+        # self.avg_reward = np.mean(-(np.log(1 - np.asarray(enter_prob)) + np.log(1 - np.array(stay_prob))))
 
     def run(self):
-        total_time = 0
-        for i in range(100000):
-            rec, room = self.__start()
-            tip = 0
-            room_time = 0
+        for step in range(500000):
+            rec, room = self._start()
+            tips, stay_time = 0, 0
             while True:
-                total_time += 1
-                room_time += 1
-                tip += self.__tip(room)
-                if not self.__is_stay(room):
-                    state, reward, next_state = self.__leave_room(rec, room, tip, room_time)
+                stay_time += 1
+                tips += self._tip(room)
+                if not self._is_stay(room):
+                    state, reward, next_state = self._leave_room(rec, room, tips, stay_time)
                     self.recommender.update(state, room, reward, next_state, False)
-                    self.global_step += 1
                     break
 
-            if self.global_step % 1000 == 0 and self.global_step:
-                print self.global_step,
-                self.__stat()
+            if step % 1000 == 0 and step:
+                self._log(step)
 
-    def __start(self):
-        rec = self.recommender.act(self.__gen_state(self.history))
-        # update enter prob
+    def _start(self):
+        rec = self.recommender.random_act(self._gen_state(self.history))
         if np.random.random() < self.enter_prob[rec]:
-            self.counter[rec] += 1
-            self.enter_prob = self.counter / np.sum(self.counter)
-            print self.enter_prob
-        # print self.enter_prob
-
-        room = np.random.choice(np.arange(5), p=self.enter_prob)
+            pass
+        room = np.random.choice(range(5), p=self.enter_prob)
         return rec, room
 
-    def __tip(self, room):
-        if np.random.random() < (self.tip_prob * self.coefficient[room]):
-            return np.random.randint(1, 4)
-        else:
-            return 0
+    def _tip(self, room):
+        return 1 if np.random.random() < self.tip_prob[room] else 0
 
-    def __is_stay(self, room):
-        noise = (np.random.random(5)-0.5) * 0.1
-        stay_prob = self.stay_prob + noise
-        if np.random.random() < stay_prob[room]:
-            return True
-        else:
-            return False
+    def _is_stay(self, room):
+        return True if np.random.random() < self.stay_prob[room] else False
 
-    def __leave_room(self, rec, room, tip, room_time):
-        state = self.__gen_state(self.history)
-        self.history.append([room, tip, room_time])
-        next_state = self.__gen_state(self.history)
-        reward = self.__cal_reward(rec)
+    def _leave_room(self, rec, room, tips, stay_time):
+        state = self._gen_state(self.history)
+        self.history.append([room, tips, stay_time])
+        next_state = self._gen_state(self.history)
+        reward = self._cal_reward(rec)
         return state, reward, next_state
 
-    def __random_recommend(self):
-        return np.random.choice(np.arange(5), size=3, replace=False)
-
-    def __cal_reward(self, rec):
+    def _cal_reward(self, rec):
         reward = -(np.log(1-self.enter_prob[rec]) + np.log(1-self.stay_prob[rec]))
-        return reward - self.avg_reward
+        return reward
 
-    def __stat(self):
-        history = np.array(self.history)
+    def _log(self, step):
+        history = np.asarray(self.history)
         rooms = history[-1000:, 0]
         tips = history[-1000:, 1]
         times = history[-1000:, 2]
@@ -93,10 +69,11 @@ class User(object):
             self.running_tip = self.running_tip * 0.99 + np.mean(tips) * 0.01
         else:
             self.running_tip = np.mean(tips)
-        print 'avg_tip: ', self.running_tip, ' staytime: ', np.mean(times)
+        print 'step: %d avg_tip: %.4f staytime: %.2d ' % \
+                (step, self.running_tip, np.mean(times))
 
     @staticmethod
-    def __gen_state(history):
+    def _gen_state(history):
         state = np.array(history[-5:])
         if len(state) == 0:
             return np.zeros((5,3))
@@ -109,6 +86,10 @@ class User(object):
     def softmax(dis):
         return np.exp(dis - np.max(dis)) / np.sum(np.exp(dis - np.max(dis)))
 
+# simple user model
+popularity = np.array([0.1, 0.3, 0.4, 0.15, 0.05])
+favor = np.array([0.4, 0.2, 0.1, 0.2, 0.1])
+earning_ability = np.array([0.5, 0.2, 0.1, 0.1, 0.1])   # the earning ability of each room
 
-u = User(1, enter_prob=[0.1,0.5,0.2,0.1,0.1], stay_prob=[0.3, 0.8, 0.5, 0.7, 0.4], tip_prob=0.1)
+u = User(popularity, favor, earning_ability)
 u.run()
