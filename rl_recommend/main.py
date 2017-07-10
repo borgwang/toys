@@ -42,18 +42,19 @@ class User(object):
                 tips += self._tip(room)
 
             state, next_state = self._leave(room, tips, stay_time)
-            reward = self._gen_reward(rec)
-            self.recommender.update(state, room, reward, next_state, False)
+            reward = self._gen_reward(rec, room)
+            self.recommender.update(state, rec, reward, next_state, False)
 
             if step and step % 1000 == 0:
                 self._log(step)
 
     def _start(self):
-        rec = self.recommender.random_act(self._gen_state())
+        rec = self.recommender.act(self._gen_state())
         self.rec_history.append(rec)
-        if np.random.random() < self.enter_prob[rec]:
-            self._update_user(rec)
         room = np.random.choice(range(5), p=self.enter_prob)
+        if room == rec:
+            self._update_user(rec)
+
         return rec, room
 
     def _is_stay(self, room):
@@ -68,8 +69,12 @@ class User(object):
         next_state = self._gen_state()
         return state, next_state
 
-    def _gen_reward(self, rec):
-        return -(0.3 * np.log(1 - self.popularity[rec]) + 0.7 * np.log(1 - self.favor[rec]))
+    def _gen_reward(self, rec, room):
+        if rec == room:
+            # return -(0.3 * np.log(1 - self.popularity[rec]) + 0.7 * np.log(1 - self.favor[rec]))
+            return -np.log(1 - self.favor[rec])
+        else:
+            return 0
 
     def _log(self, step):
         history = np.asarray(self.history)
@@ -77,7 +82,7 @@ class User(object):
         tips = history[-1000:, 1]
         times = history[-1000:, 2]
         if self.running_tip:
-            self.running_tip = self.running_tip * 0.99 + np.mean(tips) * 0.01
+            self.running_tip = 0.99 * self.running_tip + 0.01 * np.mean(tips)
         else:
             self.running_tip = np.mean(tips)
         print 'step%d avg_tip: %.4f stay_time: %.2f ' % \
@@ -95,9 +100,9 @@ class User(object):
     def _gen_state(self):
         state = np.array(self.history[-5:])
         if len(state) == 0:
-            return np.zeros((5,3))
+            return np.zeros((5, 3))
         elif len(state) < 5:
-            return np.vstack((np.zeros([5-len(state), 3]), state))
+            return np.vstack((np.zeros([5 - len(state), 3]), state))
         else:
             return state
 
@@ -119,5 +124,8 @@ if __name__ == '__main__':
     favor = np.array([0.4, 0.2, 0.1, 0.2, 0.1])
     earning_ability = np.array([0.5, 0.2, 0.1, 0.1, 0.1])
 
-    u = User(popularity, favor, earning_ability)
-    u.run()
+    # enter_prob:  [ 0.25   0.25   0.25   0.175  0.075]
+    # tip_prob:  [ 0.45  0.2   0.1   0.15  0.1 ]
+    # stay_prob:  [ 0.4  0.2  0.1  0.2  0.1]
+
+    User(popularity, favor, earning_ability).run()
