@@ -9,4 +9,4 @@ Implementations of popular dimensionality reduction algorithms including
 We use the classical [Iris dataset](http://archive.ics.uci.edu/ml/datasets/Iris) for visualizing the result of dimensionality reduction by different algorithms.   
 
 ## Results  
-<img src="https://github.com/borgwang/toys/raw/master/dimensionalty_reduction/results.png" width = "800" height = "600" alt="dr" align=center />  
+<img src="https://github.com/borgwang/toys/raw/master/dimensionalty_reduction/results.png" width = "810" height = "600" alt="dr"  align=center />  
