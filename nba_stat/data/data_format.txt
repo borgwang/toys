@@ -1,8 +1,0 @@
-# ---------- players_info.p ----------
-# format: list.
-# ['Status', 'Player', 'First year', 'Last year', 'Position', 'Height', 'Weight', 'Birth Date', 'College']
-
-
-# ---------- players_links.p ----------
-# format: dictionary
-# {name: link}
