@@ -1,7 +1,7 @@
-## Gaussian Process
+## Gaussian Processes
 
-Here is the corresponding code repo of my blog post [Gaussian Process](https://borgwang.github.io/ml/2019/07/28/gaussian-process.html) on Gaussian Process.
-Implement Gaussian Process Regression(GPR) with hyperparameters optimization and multi-dimensional inputs supporting.
+Here is the corresponding code repo of my blog post [Gaussian Processes](https://borgwang.github.io/ml/2019/07/28/gaussian-process.html) on GPs.
+Implement Gaussian Process Regression(GPR) with hyperparameters optimization and multi-input dimensional supporting.
 
 ### plottings
 
@@ -18,7 +18,7 @@ Implement Gaussian Process Regression(GPR) with hyperparameters optimization and
 <!--END figure-->
 
 ### Refer  
-- [Carl Edward Rasmussen - Gaussian Process for Machine Learning](http://www.gaussianprocess.org/gpml/chapters/RW.pdf)
+- [Carl Edward Rasmussen - Gaussian Processes for Machine Learning](http://www.gaussianprocess.org/gpml/chapters/RW.pdf)
 - [MLSS 2012 J. Cunningham - Gaussian Processes for Machine Learning](http://www.columbia.edu/~jwp2128/Teaching/E6892/papers/mlss2012_cunningham_gaussian_processes.pdf)
-- [Martin Krasser's blog- Gaussian Process](http://krasserm.github.io/2018/03/19/gaussian-processes/)
+- [Martin Krasser's blog- Gaussian Processes](http://krasserm.github.io/2018/03/19/gaussian-processes/)
 - [scikit-learn GaussianProcessRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html)
