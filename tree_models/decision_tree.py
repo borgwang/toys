@@ -1,9 +1,14 @@
 from collections import Counter
 
 import numpy as np
+
+from sklearn.datasets import load_boston
 from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import mean_squared_error as mse_score
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeRegressor
 
 
 def is_numerical(val):
@@ -39,6 +44,7 @@ class DTNode:
 class DecisionTree:
 
     def __init__(self, 
+                 criterion,
                  max_depth,
                  min_samples_split, 
                  min_impurity_split,
@@ -46,8 +52,8 @@ class DecisionTree:
         self.max_depth = float("inf") if max_depth is None else max_depth
         self.min_samples_split = min_samples_split
         self.min_impurity_split = min_impurity_split
+        self.criterion = criterion
         self.loss = loss
-
 
         self.root = None
 
@@ -56,12 +62,12 @@ class DecisionTree:
         self.loss = None
 
     def predict(self, X):
-        return np.array([self._predict_sample(x) for x in X]).reshape(-1, 1)
+        return np.array([self._predict_sample(x) for x in X])
 
-    def impurity_func(self, *args, **kwargs):
+    def _impurity_func(self, *args, **kwargs):
         raise NotImplementedError
 
-    def aggregation_func(self, *args, **kwargs):
+    def _aggregation_func(self, *args, **kwargs):
         raise NotImplementedError
 
     def _build_tree(self, X, y, curr_depth=0):
@@ -69,7 +75,7 @@ class DecisionTree:
 
         impurity = 0
         if n_samples >= self.min_samples_split and curr_depth <= self.max_depth:
-            split, impurity = self._find_split_point(X, y)
+            split, impurity = self._find_best_split(X, y)
 
         if impurity > self.min_impurity_split:
             left = self._build_tree(split["l_x"], split["l_y"], curr_depth + 1)
@@ -81,7 +87,7 @@ class DecisionTree:
             leaf_val = self._aggregation_func(y)
             return DTNode(value=leaf_val)
 
-    def _find_split_point(self, X, y):
+    def _find_best_split(self, X, y):
         # find the best feature and the best split point (largest impurity)
         Xy = np.concatenate((X, y), axis=1)
         n_feats = X.shape[1]
@@ -95,7 +101,6 @@ class DecisionTree:
                 Xy1, Xy2 = divide_on_feature(Xy, col, thr)
                 if not len(Xy1) or not len(Xy2):
                     continue
-
                 l_y, r_y = Xy1[:, n_feats:], Xy2[:, n_feats:]
                 impurity = self._impurity_func(y, l_y, r_y)
                 if impurity > max_impurity:
@@ -129,9 +134,9 @@ class ClassificationTree(DecisionTree):
                  max_depth=None,
                  min_samples_split=2,
                  min_impurity_split=1e-7):
-        super().__init__(max_depth, min_samples_split, min_impurity_split, loss=None)
         assert criterion in ("info_gain", "gain_ratio", "gini")
-        self.criterion = criterion
+        super().__init__(criterion, max_depth, min_samples_split, 
+                         min_impurity_split, loss=None)
 
     def _impurity_func(self, y, l_y, r_y):
         if self.criterion == "info_gain":
@@ -180,29 +185,42 @@ class ClassificationTree(DecisionTree):
 
 class RegressionTree(DecisionTree):
     
-    def _impurity_func(self):
-        pass
+    def __init__(self, 
+                 criterion="mse", 
+                 max_depth=None,
+                 min_samples_split=2,
+                 min_impurity_split=1e-7):
+        assert criterion in ("mse", "mae", "friedman_mse")
+        super().__init__(criterion, max_depth, min_samples_split, 
+                         min_impurity_split, loss=None)
 
-    def _aggregation_func(self):
+    def _impurity_func(self, y, l_y, r_y):
+        if self.criterion == "mse":
+            return self.__mse(y, l_y, r_y)
+        elif self.criterion == "mae":
+            return self.__mae(y, l_y, r_y)
+        else:
+            return self.__friedman_mse(y, l_y, r_y)
+
+    def _aggregation_func(self, y):
         # simple average
+        return np.mean(y, axis=0)
+
+    def __mse(self, y, l_y, r_y):
+        l_f = len(l_y) / len(y)
+        r_f = len(r_y) / len(y)
+        before = np.var(y)
+        after = l_f * np.var(l_y) + r_f * np.var(r_y)
+        return before - after
+
+    def __mae(self, y, l_y, r_y):
+        l_f = len(l_y) / len(y)
+        r_f = len(r_y) / len(y)
+        before = np.abs(y - y.mean()).mean()
+        after = (l_f * np.abs(l_y - l_y.mean()).mean() +
+                 r_f * np.abs(r_y - r_y.mean()).mean())
+        return before - after
+
+    def __friedman_mse(self):
         pass
 
-
-if __name__ == "__main__":
-    data = load_iris()
-    X = data.data
-    y = data.target
-    y = y.reshape((-1, 1))
-
-    train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.3)
-    model = ClassificationTree(criterion="gini", max_depth=None, min_samples_split=2)
-    model.fit(train_x, train_y)
-    test_preds = model.predict(test_x)
-
-    from sklearn.tree import DecisionTreeClassifier
-    model = DecisionTreeClassifier(criterion="gini", max_depth=None, min_samples_split=2)
-    model.fit(train_x, train_y)
-    test_preds2 = model.predict(test_x)
-
-    print("acc-mine: %.4f" % accuracy_score(test_y, test_preds))
-    print("acc-sklearn: %.4f" % accuracy_score(test_y, test_preds2))
