@@ -7,16 +7,6 @@ def is_numerical(val):
     return isinstance(val, int) or isinstance(val, float)
 
 
-def divide_on_feature(Xy, feat_idx, thr):
-    if is_numerical(thr):
-        # numerical feature
-        mask = Xy[:, feat_idx] < thr
-    else:
-        # categorical feature
-        mask = Xy[: feat_idx] == thr
-    return Xy[mask], Xy[~mask]
-
-
 class DTNode:
 
     def __init__(self, 
@@ -89,7 +79,7 @@ class DecisionTree:
             # for each feature
             for thr in np.unique(X[:, col]):
                 # for each unique value of curr feature
-                Xy1, Xy2 = divide_on_feature(Xy, col, thr)
+                Xy1, Xy2 = self._divide(Xy, col, thr)
                 if not len(Xy1) or not len(Xy2):
                     continue
                 l_y, r_y = Xy1[:, n_feats:], Xy2[:, n_feats:]
@@ -116,6 +106,14 @@ class DecisionTree:
         else:
             node = node.left if feat == node.threshold else node.right 
         return self._predict_sample(x, node=node)
+
+    @staticmethod
+    def _divide(data, col, thr):
+        if is_numerical(thr):
+            mask = data[:, feat_idx] < thr
+        else:
+            mask = data[: feat_idx] == thr
+        return data[mask], data[~mask]
 
 
 class ClassificationTree(DecisionTree):
@@ -176,7 +174,7 @@ class ClassificationTree(DecisionTree):
 
 
 class RegressionTree(DecisionTree):
-    
+
     def __init__(self, 
                  criterion="mse", 
                  max_depth=None,
@@ -199,21 +197,24 @@ class RegressionTree(DecisionTree):
 
     @staticmethod
     def __mse(y, l_y, r_y):
+        mse_func = lambda x: np.mean(np.square(x - x.mean()))
+
         l_f = len(l_y) / len(y)
-        r_f = len(r_y) / len(y)
-        before = np.var(y)
-        after = l_f * np.var(l_y) + r_f * np.var(r_y)
+        before = mse_func(y)
+        after = l_f * mse_func(l_y) + (1 - l_f) * mse_func(r_y)
         return before - after
 
     @staticmethod
     def __mae(y, l_y, r_y):
+        mae_func = lambda x: np.mean(np.abs(x - x.mean()))
+
         l_f = len(l_y) / len(y)
-        r_f = len(r_y) / len(y)
-        before = np.abs(y - y.mean()).mean()
-        after = (l_f * np.abs(l_y - l_y.mean()).mean() +
-                 r_f * np.abs(r_y - r_y.mean()).mean())
+        before = mae_func(y)
+        after = l_f * mae_func(l_y) + (1 - l_f) * mae_func(r_y)
         return before - after
 
     @staticmethod
     def __friedman_mse(y, l_y, r_y):
-        pass
+        l_mean, r_mean = l_y.mean(), r_y.mean()
+        return len(l_y) * len(r_y) * (l_mean - r_mean) ** 2 / len(y)
+
