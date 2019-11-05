@@ -2,14 +2,6 @@ from collections import Counter
 
 import numpy as np
 
-from sklearn.datasets import load_boston
-from sklearn.datasets import load_iris
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import mean_squared_error as mse_score
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.tree import DecisionTreeRegressor
-
 
 def is_numerical(val):
     return isinstance(val, int) or isinstance(val, float)
@@ -23,7 +15,6 @@ def divide_on_feature(Xy, feat_idx, thr):
         # categorical feature
         mask = Xy[: feat_idx] == thr
     return Xy[mask], Xy[~mask]
-
 
 
 class DTNode:
@@ -144,33 +135,35 @@ class ClassificationTree(DecisionTree):
         elif self.criterion == "gain_ratio":
             return self.__gain_ratio(y, l_y, r_y)
         else:
-            # use 1-gini_index to represent impurity since gini_index measures purity
+            # use 1 - gini_index to represent impurity
+            # since gini_index measures purity
             return 1.0 - self.__gini_index(y, l_y, r_y)
 
-    def __info_gain(self, y, l_y, r_y):
+    @staticmethod
+    def __info_gain(y, l_y, r_y, with_ratio=False):
 
-        def entropy(vals):
-            cnts = dict(Counter(vals.reshape(-1)))
-            probs = np.array([1. * cnt / len(vals) for cnt in cnts.values()])
+        def entropy(values):
+            counts = Counter(values.reshape(-1)).values()
+            probs = np.array([1. * cnt / len(values) for cnt in counts])
             return -(probs * np.log(probs)).sum()
 
-        before = entropy(y)
-        after = (len(l_y) * entropy(l_y) + len(r_y) * entropy(r_y)) / len(y)
-        return before - after
-        
-    def __gain_ratio(self, y, l_y, r_y):
-        info_gain = self.__info_gain(y, l_y, r_y)
-        # compute IV
         l_f = len(l_y) / len(y)
         r_f = len(r_y) / len(y)
-        iv = -(l_f * np.log(l_f) + r_f * np.log(r_f))
-        return info_gain / iv
+        before = entropy(y)
+        after = l_f * entropy(l_y) + r_f * entropy(r_y)
+        info_gain = before - after
 
-    def __gini_index(self, y, l_y, r_y):
+        if with_ratio:
+            iv = -(l_f * np.log(l_f) + r_f * np.log(r_f))
+            info_gain /= iv
+        return info_gain
+        
+    @staticmethod
+    def __gini_index(y, l_y, r_y):
 
         def gini(vals):
-            cnts = Counter(vals.reshape(-1)).values()
-            probs = np.array([1. * cnt / len(vals) for cnt in cnts])
+            counts = Counter(vals.reshape(-1)).values()
+            probs = np.array([1. * cnt / len(vals) for cnt in counts])
             return 1.0 - np.sum(probs ** 2)
 
         l_f = len(l_y) / len(y)
@@ -178,7 +171,6 @@ class ClassificationTree(DecisionTree):
         return l_f * gini(l_y) + r_f * gini(r_y)
 
     def _aggregation_func(self, y):
-        # majority vote
         res = Counter(y.reshape(-1))
         return res.most_common()[0][0]
 
@@ -203,17 +195,18 @@ class RegressionTree(DecisionTree):
             return self.__friedman_mse(y, l_y, r_y)
 
     def _aggregation_func(self, y):
-        # simple average
         return np.mean(y, axis=0)
 
-    def __mse(self, y, l_y, r_y):
+    @staticmethod
+    def __mse(y, l_y, r_y):
         l_f = len(l_y) / len(y)
         r_f = len(r_y) / len(y)
         before = np.var(y)
         after = l_f * np.var(l_y) + r_f * np.var(r_y)
         return before - after
 
-    def __mae(self, y, l_y, r_y):
+    @staticmethod
+    def __mae(y, l_y, r_y):
         l_f = len(l_y) / len(y)
         r_f = len(r_y) / len(y)
         before = np.abs(y - y.mean()).mean()
@@ -221,6 +214,6 @@ class RegressionTree(DecisionTree):
                  r_f * np.abs(r_y - r_y.mean()).mean())
         return before - after
 
-    def __friedman_mse(self):
+    @staticmethod
+    def __friedman_mse(y, l_y, r_y):
         pass
-
