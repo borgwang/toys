@@ -110,13 +110,13 @@ class DecisionTree:
     @staticmethod
     def _divide(data, col, thr):
         if is_numerical(thr):
-            mask = data[:, feat_idx] < thr
+            mask = data[:, col] < thr
         else:
-            mask = data[: feat_idx] == thr
+            mask = data[: col] == thr
         return data[mask], data[~mask]
 
 
-class ClassificationTree(DecisionTree):
+class DecisionTreeClassifier(DecisionTree):
 
     def __init__(self, 
                  criterion="gini", 
@@ -173,7 +173,7 @@ class ClassificationTree(DecisionTree):
         return res.most_common()[0][0]
 
 
-class RegressionTree(DecisionTree):
+class DecisionTreeRegressor(DecisionTree):
 
     def __init__(self, 
                  criterion="mse", 
