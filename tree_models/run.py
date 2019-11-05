@@ -36,9 +36,11 @@ def test_classification():
 
 
 def test_regression():
+    import numpy as np
     data = load_boston()
     X, y = data.data, data.target
     y = y.reshape((-1, 1))
+    y = np.concatenate([y, y * 0.1], axis=1)
     train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.3)
 
     ts = time.time()
@@ -48,7 +50,7 @@ def test_regression():
     test_preds = model.predict(test_x)
 
     ts2 = time.time()
-    model = DecisionTreeRegressor(criterion="mse")
+    model = DecisionTreeRegressor(criterion="mae")
     model.fit(train_x, train_y)
     te2 = time.time()
     test_preds2 = model.predict(test_x)
