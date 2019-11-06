@@ -212,24 +212,22 @@ class DecisionTreeRegressor(DecisionTree):
 
     @staticmethod
     def __mse(y, l_y, r_y):
-        mse_func = lambda x: np.mean(np.square(x - x.mean()))
-
+        mse_loss = lambda x: np.mean(np.square(x - x.mean(0)), 0)
         l_f = len(l_y) / len(y)
-        before = mse_func(y)
-        after = l_f * mse_func(l_y) + (1 - l_f) * mse_func(r_y)
-        return before - after
+        before = mse_loss(y)
+        after = l_f * mse_loss(l_y) + (1 - l_f) * mse_loss(r_y)
+        return np.mean(before - after)
 
     @staticmethod
     def __mae(y, l_y, r_y):
-        mae_func = lambda x: np.mean(np.abs(x - x.mean()))
-
+        mae_loss = lambda x: np.mean(np.abs(x - x.mean(0)), 0)
         l_f = len(l_y) / len(y)
-        before = mae_func(y)
-        after = l_f * mae_func(l_y) + (1 - l_f) * mae_func(r_y)
-        return before - after
+        before = mae_loss(y)
+        after = l_f * mae_loss(l_y) + (1 - l_f) * mae_loss(r_y)
+        return np.mean(before - after)
 
     @staticmethod
     def __friedman_mse(y, l_y, r_y):
-        l_mean, r_mean = l_y.mean(), r_y.mean()
-        return len(l_y) * len(r_y) * (l_mean - r_mean) ** 2 / len(y)
-
+        l_mean, r_mean = l_y.mean(0), r_y.mean(0)
+        friedman_mse = len(l_y) * len(r_y) * (l_mean - r_mean) ** 2 / len(y)
+        return np.mean(friedman_mse)
