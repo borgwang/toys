@@ -1,5 +1,4 @@
-import time
-
+import sklearn.ensemble as ensemble
 import sklearn.tree as tree
 from sklearn.datasets import load_boston
 from sklearn.datasets import load_iris
@@ -29,54 +28,73 @@ def get_regression_dataset():
 
 def test_dt_classifier():
     train_x, test_x, train_y, test_y = get_classification_dataset()
-    ts = time.time()
-    model = GradientBoostingClassifier()
+    model = DecisionTreeClassifier()
     model.fit(train_x, train_y)
     test_preds = model.predict(test_x)
-    te = time.time()
 
-    ts2 = time.time()
-    model = tree.GradientBoostingClassifier()
+    model = tree.DecisionTreeClassifier()
     model.fit(train_x, train_y)
-    te2 = time.time()
     test_preds2 = model.predict(test_x)
 
     print("acc-mine: %.4f" % accuracy_score(test_y, test_preds))
     print("acc-sklearn: %.4f" % accuracy_score(test_y, test_preds2))
-    print((te - ts) / (te2 - ts2))
 
 
 def test_dt_regressor():
-    train_x, test_x, train_y, test_y = get_classification_dataset()
+    train_x, test_x, train_y, test_y = get_regression_dataset()
 
-    ts = time.time()
-    model = GradientBoostingRegressor()
+    model = DecisionTreeRegressor()
     model.fit(train_x, train_y)
-    te = time.time()
     test_preds = model.predict(test_x)
 
-    ts2 = time.time()
-    model = tree.GradientBoostingRegressor()
+    model = tree.DecisionTreeRegressor()
     model.fit(train_x, train_y)
-    te2 = time.time()
     test_preds2 = model.predict(test_x)
 
     print("mse-mine: %.4f" % mse_score(test_y, test_preds))
     print("mse-sklearn: %.4f" % mse_score(test_y, test_preds2))
-    print((te - ts) / (te2 - ts2))
 
 
 def test_gbdt_classifier():
     train_x, test_x, train_y, test_y = get_classification_dataset()
-    ts = time.time()
-    model = DecisionTreeRegressor(criterion="mse")
+
+    model = GradientBoostingClassifier()
     model.fit(train_x, train_y)
-    te = time.time()
     test_preds = model.predict(test_x)
+    print("acc-mine: %.4f" % accuracy_score(test_y, test_preds))
+
+    train_y = train_y.ravel()
+    test_y = test_y.ravel()
+    model = ensemble.GradientBoostingClassifier()
+    model.fit(train_x, train_y)
+    test_preds2 = model.predict(test_x)
+
+    print("acc-sklearn: %.4f" % accuracy_score(test_y, test_preds2))
+
+
+def test_gbdt_regressor():
+    train_x, test_x, train_y, test_y = get_regression_dataset()
+
+    model = GradientBoostingRegressor(max_depth=3, n_estimators=50)
+    model.fit(train_x, train_y)
+    test_preds = model.predict(test_x)
+    print("mse-mine: %.4f" % mse_score(test_y, test_preds))
+
+    train_y = train_y.ravel()
+    test_y = test_y.ravel()
+    model = ensemble.GradientBoostingRegressor(max_depth=3, n_estimators=50)
+    model.fit(train_x, train_y)
+    test_preds2 = model.predict(test_x)
+
+    print("mse-sklearn: %.4f" % mse_score(test_y, test_preds2))
 
 
 if __name__ == "__main__":
-    #test_dt_classifer()
-    #test_dt_regressor()
+    print("test_dt_classifier")
+    test_dt_classifier()
+    print("test_dt_regressor")
+    test_dt_regressor()
+    print("test_gbdt_classifier")
     test_gbdt_classifier()
-    #test_gbdt_regressor()
+    print("test_gbdt_regressor")
+    test_gbdt_regressor()

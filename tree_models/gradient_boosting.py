@@ -1,7 +1,8 @@
 import numpy as np
 
-from decision_tree import DecisionTreeClassifier
 from decision_tree import DecisionTreeRegressor
+from utils import get_one_hot
+from utils import softmax
 
 
 class GradientBoosting:
