@@ -25,23 +25,23 @@ class GradientBoosting:
             "min_impurity_split": min_impurity_split,
             "max_depth": max_depth}
 
-        self.learners = [DecisionTreeClassifier(**tree_params) 
+        self.learners = [DecisionTreeRegressor(**tree_params) 
                          for _ in range(self.n_estimators)]
 
     def fit(self, X, y):
-        self.init_F = np.ones_like(y) * y.mean(0)
-        F = self.init_F
+        self.y_dim = y.shape[1]
+        F = np.zeros_like(y, dtype=float)
         for i in range(self.n_estimators):
-            # fit gradient
             grads = self._gradient_func(y, F)
+            # fit gradient
             self.learners[i].fit(X, grads)
-            grads_preds = self.learners[i].predict(X)
             # update F
+            grads_preds = self.learners[i].predict(X)
             F -= self.lr * grads_preds
 
     def predict(self, X):
-        F = self.init_F
-        for learner in self.learners:
+        F = np.zeros((X.shape[0], self.y_dim), dtype=float)
+        for i, learner in enumerate(self.learners):
             grads_preds = learner.predict(X)
             F -= self.lr * grads_preds
         return F
@@ -72,12 +72,21 @@ class GradientBoostingClassifier(GradientBoosting):
 
     @staticmethod
     def __deviance_grad(y, F):
-        logistic = lambda x: 1.0 / (1.0 + np.exp(-x))
-        return logistic(F) - y
+        return softmax(F) - y
 
     @staticmethod
-    def __exponential_grad():
+    def __exponential_grad(y, F):
+        # TODO
         pass
+
+    def fit(self, X, y):
+        y = get_one_hot(y, len(np.unique(y)))
+        super().fit(X, y)
+
+    def predict(self, X):
+        preds = super().predict(X)
+        probs = softmax(preds)
+        return np.argmax(probs, 1).reshape(-1, 1)
 
 
 class GradientBoostingRegressor(GradientBoosting):
@@ -98,7 +107,7 @@ class GradientBoostingRegressor(GradientBoosting):
         grad_func_dict = {"ls": self.__ls_grad,
                           "lad": self.__lad_grad,
                           "huber": self.__huber_grad,
-                          "lad": self.__lad_grad}
+                          "quantile": self.__quantile_grad}
         assert loss in grad_func_dict
         self._gradient_func = grad_func_dict[loss]
 
