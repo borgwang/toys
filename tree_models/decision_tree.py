@@ -27,20 +27,19 @@ class DecisionTree:
     def __init__(self, 
                  criterion,
                  max_depth,
+                 max_features,
                  min_samples_split, 
-                 min_impurity_split,
-                 loss):
+                 min_impurity_split):
         self.max_depth = float("inf") if max_depth is None else max_depth
+        self.max_features = max_features
         self.min_samples_split = min_samples_split
         self.min_impurity_split = min_impurity_split
         self.criterion = criterion
-        self.loss = loss
 
         self.root = None
 
-    def fit(self, X, y, loss=None):
+    def fit(self, X, y):
         self.root = self._build_tree(X, y)
-        self.loss = None
 
     def predict(self, X):
         return np.array([self._predict_sample(x) for x in X])
@@ -75,6 +74,7 @@ class DecisionTree:
 
         max_impurity = 0.0
         best_split = None
+        n_feats = self._get_n_feats(self.max_features, n_feats)
         for col in range(n_feats):
             # for each feature
             for thr in np.unique(X[:, col]):
@@ -115,23 +115,37 @@ class DecisionTree:
             mask = data[: col] == thr
         return data[mask], data[~mask]
 
+    @staticmethod
+    def _get_n_feats(max_feats, n_feats):
+        if isinstance(max_feats, int):
+            return max_feats
+        elif isinstance(max_feats, float):
+            return int(max_feats * n_feats)
+        elif isinstance(max_feats, str):
+            if max_feats == "sqrt":
+                return int(np.sqrt(n_feats))
+            elif max_feats == "log2":
+                return int(np.log2(n_feats))
+        return n_feats
+
 
 class DecisionTreeClassifier(DecisionTree):
 
     def __init__(self, 
                  criterion="gini", 
                  max_depth=None,
+                 max_features=None,
                  min_samples_split=2,
                  min_impurity_split=1e-7):
         assert criterion in ("info_gain", "gain_ratio", "gini")
-        super().__init__(criterion, max_depth, min_samples_split, 
-                         min_impurity_split, loss=None)
+        super().__init__(criterion, max_depth, max_features, 
+                         min_samples_split, min_impurity_split)
 
     def _impurity_func(self, y, l_y, r_y):
         if self.criterion == "info_gain":
             return self.__info_gain(y, l_y, r_y)
         elif self.criterion == "gain_ratio":
-            return self.__gain_ratio(y, l_y, r_y)
+            return self.__info_gain(y, l_y, r_y, with_ratio=True)
         else:
             # use 1 - gini_index to represent impurity
             # since gini_index measures purity
@@ -176,13 +190,14 @@ class DecisionTreeClassifier(DecisionTree):
 class DecisionTreeRegressor(DecisionTree):
 
     def __init__(self, 
-                 criterion="mse", 
+                 criterion="friedman_mse", 
                  max_depth=None,
+                 max_features=None,
                  min_samples_split=2,
                  min_impurity_split=1e-7):
         assert criterion in ("mse", "mae", "friedman_mse")
-        super().__init__(criterion, max_depth, min_samples_split, 
-                         min_impurity_split, loss=None)
+        super().__init__(criterion, max_depth, max_features, 
+                         min_samples_split, min_impurity_split)
 
     def _impurity_func(self, y, l_y, r_y):
         if self.criterion == "mse":

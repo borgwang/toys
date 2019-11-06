@@ -11,6 +11,7 @@ class GradientBoosting:
                  learning_rate,
                  n_estimators,
                  criterion,
+                 max_features,
                  min_samples_split,
                  min_impurity_split,
                  max_depth):
@@ -19,6 +20,7 @@ class GradientBoosting:
         self.n_estimators = n_estimators
         tree_params = {
             "criterion": criterion, 
+            "max_features": max_features,
             "min_samples_split": min_samples_split,
             "min_impurity_split": min_impurity_split,
             "max_depth": max_depth}
@@ -55,11 +57,13 @@ class GradientBoostingClassifier(GradientBoosting):
                  learning_rate=0.1,
                  n_estimators=100,
                  criterion="friedman_mse",
+                 max_features=None,
                  min_samples_split=2,
                  min_impurity_split=1e-7,
                  max_depth=None):
-        super().__init__(loss, learning_rate, n_estimators, criterion,
-                         min_samples_split, min_impurity_split, max_depth)
+        super().__init__(loss, learning_rate, n_estimators, 
+                         criterion, max_features, min_samples_split, 
+                         min_impurity_split, max_depth)
 
         grad_func_dict = {"deviance": self.__deviance_grad,
                           "exponential": self.__exponential_grad}
@@ -83,11 +87,13 @@ class GradientBoostingRegressor(GradientBoosting):
                  learning_rate=0.1,
                  n_estimators=100,
                  criterion="friedman_mse",
+                 max_features=None,
                  min_samples_split=2,
                  min_impurity_split=1e-7,
                  max_depth=None):
-        super().__init__(loss, learning_rate, n_estimators, criterion,
-                         min_samples_split, min_impurity_split, max_depth)
+        super().__init__(loss, learning_rate, n_estimators, 
+                         criterion, max_features, min_samples_split, 
+                         min_impurity_split, max_depth)
 
         grad_func_dict = {"ls": self.__ls_grad,
                           "lad": self.__lad_grad,
