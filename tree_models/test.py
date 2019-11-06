@@ -6,6 +6,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error as mse_score
 from sklearn.model_selection import train_test_split
 
+from bagging import RandomForestClassifier
+from bagging import RandomForestRegressor
 from decision_tree import DecisionTreeClassifier
 from decision_tree import DecisionTreeRegressor
 from gradient_boosting import GradientBoostingClassifier
@@ -89,12 +91,40 @@ def test_gbdt_regressor():
     print("mse-sklearn: %.4f" % mse_score(test_y, test_preds2))
 
 
+def test_rf_classifier():
+    train_x, test_x, train_y, test_y = get_classification_dataset()
+    model = RandomForestClassifier(n_estimators=10)
+    model.fit(train_x, train_y)
+    test_preds = model.predict(test_x)
+
+    model = ensemble.RandomForestClassifier(n_estimators=10)
+    model.fit(train_x, train_y)
+    test_preds2 = model.predict(test_x)
+
+    print("acc-mine: %.4f" % accuracy_score(test_y, test_preds))
+    print("acc-sklearn: %.4f" % accuracy_score(test_y, test_preds2))
+
+
+def test_rf_regressor():
+    train_x, test_x, train_y, test_y = get_regression_dataset()
+
+    model = RandomForestRegressor(n_estimators=10)
+    model.fit(train_x, train_y)
+    test_preds = model.predict(test_x)
+
+    model = ensemble.RandomForestRegressor(n_estimators=10)
+    model.fit(train_x, train_y)
+    test_preds2 = model.predict(test_x)
+
+    print("mse-mine: %.4f" % mse_score(test_y, test_preds))
+    print("mse-sklearn: %.4f" % mse_score(test_y, test_preds2))
+
+
 if __name__ == "__main__":
-    print("test_dt_classifier")
-    test_dt_classifier()
-    print("test_dt_regressor")
-    test_dt_regressor()
-    print("test_gbdt_classifier")
-    test_gbdt_classifier()
-    print("test_gbdt_regressor")
-    test_gbdt_regressor()
+    #test_dt_classifier()
+    #test_dt_regressor()
+    #test_gbdt_classifier()
+    #test_gbdt_regressor()
+    #test_rf_classifier()
+    test_rf_regressor()
+
