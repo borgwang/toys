@@ -2,9 +2,7 @@ from collections import Counter
 
 import numpy as np
 
-
-def is_numerical(val):
-    return isinstance(val, int) or isinstance(val, float)
+from utils import is_numerical
 
 
 class DTNode:
