@@ -72,8 +72,12 @@ class DecisionTree:
 
         max_impurity = 0.0
         best_split = None
-        n_feats = self._get_n_feats(self.max_features, n_feats)
-        for col in range(n_feats):
+
+        # subset of feature columns
+        k = self._get_n_feats(self.max_features, n_feats)
+        cols = np.random.choice(range(n_feats), k, replace=False)
+
+        for col in cols:
             # for each feature
             for thr in np.unique(X[:, col]):
                 # for each unique value of curr feature
