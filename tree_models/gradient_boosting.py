@@ -1,7 +1,6 @@
 import numpy as np
 
 from decision_tree import DecisionTreeRegressor
-from decision_tree import XGBoostDecisionTreeRegressor
 from utils import get_one_hot
 from utils import softmax
 
@@ -51,7 +50,7 @@ class GradientBoosting:
 
     def predict(self, x):
         F = np.zeros((x.shape[0], self.y_dim), dtype=float)
-        for i, learner in enumerate(self.learners):
+        for learner in self.learners:
             f_pred = learner.predict(x)
             F += self.lr * f_pred
         return F

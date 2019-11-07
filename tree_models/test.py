@@ -8,11 +8,13 @@ from sklearn.model_selection import train_test_split
 
 from decision_tree import DecisionTreeClassifier
 from decision_tree import DecisionTreeRegressor
-from decision_tree import XGBoostDecisionTreeRegressor
 from gradient_boosting import GradientBoostingClassifier
 from gradient_boosting import GradientBoostingRegressor
 from random_forest import RandomForestClassifier
 from random_forest import RandomForestRegressor
+
+#from xgboost import XGBoostGradientBoostingClassifier
+from xgboost import XGBoostRegressor
 
 
 def get_classification_dataset():
@@ -134,18 +136,19 @@ def test_rf_regressor():
 def test_xgbdt_regressor():
     train_x, test_x, train_y, test_y = get_regression_dataset()
 
-    model = XGBoostDecisionTreeRegressor()
+    model = XGBoostRegressor(n_estimators=10)
     model.fit(train_x, train_y)
     test_preds = model.predict(test_x)
     print("feat_importances-mine: ", model.feature_importances_)
 
-    model = tree.DecisionTreeRegressor()
+    model = ensemble.GradientBoostingRegressor(n_estimators=10)
     model.fit(train_x, train_y)
     test_preds2 = model.predict(test_x)
     print("feat_importances-sklearn: ", model.feature_importances_)
 
     print("mse-mine: %.4f" % mse_score(test_y, test_preds))
     print("mse-sklearn: %.4f" % mse_score(test_y, test_preds2))
+
 
 if __name__ == "__main__":
     #test_dt_classifier()
