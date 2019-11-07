@@ -156,9 +156,7 @@ class DecisionTreeClassifier(DecisionTree):
         elif self.criterion == "gain_ratio":
             return self.__info_gain(y, l_y, r_y, with_ratio=True)
         else:
-            # use 1 - gini_index to represent impurity
-            # since gini_index measures purity
-            return 1.0 - self.__gini_index(y, l_y, r_y)
+            return self.__gini_index(y, l_y, r_y)
 
     @staticmethod
     def __info_gain(y, l_y, r_y, with_ratio=False):
@@ -189,7 +187,9 @@ class DecisionTreeClassifier(DecisionTree):
 
         l_f = len(l_y) / len(y)
         r_f = len(r_y) / len(y)
-        return l_f * gini(l_y) + r_f * gini(r_y)
+        before = gini(y)
+        after = l_f * gini(l_y) + r_f * gini(r_y)
+        return before - after
 
     def _aggregation_func(self, y):
         res = Counter(y.reshape(-1))
