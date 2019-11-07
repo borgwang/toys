@@ -36,12 +36,12 @@ class GradientBoosting:
         self.y_dim = y.shape[1]
         F = np.zeros_like(y, dtype=float)
         for i in range(self.n_estimators):
-            grads = self._gradient_func(y, F)
+            neg_grad = self._neg_grad_func(y, F)
             # fit gradient
-            self.learners[i].fit(x, grads)
+            self.learners[i].fit(x, neg_grad)
             # update F
-            grads_preds = self.learners[i].predict(x)
-            F -= self.lr * grads_preds
+            neg_grad_preds = self.learners[i].predict(x)
+            F += self.lr * neg_grad_preds
             # update feature importances
             self._raw_feat_imps += self.learners[i]._raw_feat_imps
         # normalize feature importances
@@ -51,11 +51,11 @@ class GradientBoosting:
     def predict(self, x):
         F = np.zeros((x.shape[0], self.y_dim), dtype=float)
         for i, learner in enumerate(self.learners):
-            grads_preds = learner.predict(x)
-            F -= self.lr * grads_preds
+            neg_grad_preds = learner.predict(x)
+            F += self.lr * neg_grad_preds
         return F
 
-    def _gradient_func(self, y, F):
+    def _neg_grad_func(self, y, F):
         raise NotImplementedError
 
 
@@ -74,17 +74,17 @@ class GradientBoostingClassifier(GradientBoosting):
                          criterion, max_features, min_samples_split, 
                          min_impurity_split, max_depth)
 
-        grad_func_dict = {"deviance": self.__deviance_grad,
-                          "exponential": self.__exponential_grad}
+        func_dict = {"deviance": self.__deviance,
+                     "exponential": self.__exponential}
         assert loss in grad_func_dict
-        self._gradient_func = grad_func_dict[loss]
+        self._neg_grad_func = func_dict[loss]
 
     @staticmethod
-    def __deviance_grad(y, F):
-        return softmax(F) - y
+    def __deviance(y, F):
+        return y - softmax(F)
 
     @staticmethod
-    def __exponential_grad(y, F):
+    def __exponential(y, F):
         # TODO
         pass
 
@@ -113,25 +113,25 @@ class GradientBoostingRegressor(GradientBoosting):
                          criterion, max_features, min_samples_split, 
                          min_impurity_split, max_depth)
 
-        grad_func_dict = {"ls": self.__ls_grad,
-                          "lad": self.__lad_grad,
-                          "huber": self.__huber_grad,
-                          "quantile": self.__quantile_grad}
-        assert loss in grad_func_dict
-        self._gradient_func = grad_func_dict[loss]
+        func_dict = {"ls": self.__ls,
+                     "lad": self.__lad,
+                     "huber": self.__huber,
+                     "quantile": self.__quantile}
+        assert loss in func_dict
+        self._neg_grad_func = func_dict[loss]
 
     @staticmethod
-    def __ls_grad(y, F):
-        return F - y
+    def __ls(y, F):
+        return y - F
 
     @staticmethod
-    def __lad_grad(y, F):
+    def __lad(y, F):
         pass
 
     @staticmethod
-    def __huber_grad(y, F):
+    def __huber(y, F):
         pass
 
     @staticmethod
-    def __quantile_grad(y, F):
+    def __quantile(y, F):
         pass
