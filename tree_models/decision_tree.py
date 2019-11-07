@@ -35,9 +35,14 @@ class DecisionTree:
         self.criterion = criterion
 
         self.root = None
+        self.feature_importances_ = None
+        self._raw_feat_imps = None
 
-    def fit(self, X, y):
-        self.root = self._build_tree(X, y)
+    def fit(self, x, y):
+        self.root = self._build_tree(x, y)
+        # normalize feature importances
+        self.feature_importances_ = (
+            self._raw_feat_imps / self._raw_feat_imps.sum())
 
     def predict(self, X):
         return np.array([self._predict_sample(x) for x in X])
@@ -48,16 +53,18 @@ class DecisionTree:
     def _aggregation_func(self, *args, **kwargs):
         raise NotImplementedError
 
-    def _build_tree(self, X, y, curr_depth=0):
-        n_samples, n_feats = X.shape
+    def _build_tree(self, x, y, curr_depth=0):
+        n_samples, n_feats = x.shape
+        self._raw_feat_imps = np.zeros(n_feats, dtype=float)
 
         impurity = 0
         if n_samples >= self.min_samples_split and curr_depth <= self.max_depth:
-            split, impurity = self._find_best_split(X, y)
+            split, impurity = self._find_best_split(x, y)
 
         if impurity > self.min_impurity_split:
             left = self._build_tree(split["l_x"], split["l_y"], curr_depth + 1)
             right = self._build_tree(split["r_x"], split["r_y"], curr_depth + 1)
+            self._raw_feat_imps[split["feat_idx"]] += impurity
             return DTNode(feat_idx=split["feat_idx"], threshold=split["threshold"],
                           left=left, right=right)
         else:
@@ -134,7 +141,7 @@ class DecisionTree:
 class DecisionTreeClassifier(DecisionTree):
 
     def __init__(self, 
-                 criterion="gini", 
+                 criterion="info_gain", 
                  max_depth=None,
                  max_features=None,
                  min_samples_split=2,
