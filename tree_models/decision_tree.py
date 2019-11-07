@@ -3,6 +3,9 @@ from collections import Counter
 import numpy as np
 
 from utils import is_numerical
+from utils import Logistic
+from utils import MAE
+from utils import MSE
 
 
 class DTNode:
@@ -68,7 +71,6 @@ class DecisionTree:
             return DTNode(feat_idx=split["feat_idx"], threshold=split["threshold"],
                           left=left, right=right)
         else:
-            # leaf node
             leaf_val = self._aggregation_func(y)
             return DTNode(value=leaf_val)
 
@@ -220,18 +222,16 @@ class DecisionTreeRegressor(DecisionTree):
 
     @staticmethod
     def __mse(y, l_y, r_y):
-        mse_loss = lambda x: np.mean(np.square(x - x.mean(0)), 0)
         l_f = len(l_y) / len(y)
-        before = mse_loss(y)
-        after = l_f * mse_loss(l_y) + (1 - l_f) * mse_loss(r_y)
+        before = MSE.loss(y, y.mean(0))
+        after = l_f * MSE.loss(l_y, l_y.mean(0)) + (1 - l_f) * MSE.loss(r_y, r_y.mean(0))
         return np.mean(before - after)
 
     @staticmethod
     def __mae(y, l_y, r_y):
-        mae_loss = lambda x: np.mean(np.abs(x - x.mean(0)), 0)
         l_f = len(l_y) / len(y)
-        before = mae_loss(y)
-        after = l_f * mae_loss(l_y) + (1 - l_f) * mae_loss(r_y)
+        before = MAE.loss(y, y.mean(0))
+        after = l_f * MAE.loss(l_y, l_y.mean(0)) + (1 - l_f) * MAE.loss(r_y, r_y.mean(0))
         return np.mean(before - after)
 
     @staticmethod
@@ -239,3 +239,36 @@ class DecisionTreeRegressor(DecisionTree):
         l_mean, r_mean = l_y.mean(0), r_y.mean(0)
         friedman_mse = len(l_y) * len(r_y) * (l_mean - r_mean) ** 2 / len(y)
         return np.mean(friedman_mse)
+
+
+class XGBoostDecisionTreeRegressor(DecisionTree):
+    
+    def __init__(self,  
+                 criterion="mse",
+                 max_depth=None,
+                 max_features=None,
+                 min_samples_split=2,
+                 min_impurity_split=1e-7):
+        super().__init__(criterion, max_depth, max_features, 
+                         min_samples_split, min_impurity_split)
+        assert criterion in ("mse", "mae")
+        self.loss = MSE if criterion == "mse" else MAE
+
+    def _score_func(self, y, l_y, r_y):
+        if self.criterion == "mse":
+            before = self.__score(y)
+            after = self.__score(l_y) + self.__score(r_y)
+            # BUG
+            return np.exp(after - before)
+        else:
+            pass
+
+    def _aggregation_func(self, y):
+        return - self.loss.grad(y) / self.loss.hess(y)
+
+    def __score(self, y):
+        y_pred = np.zeros_like(y, dtype=float)
+        G = self.loss.grad(y, y_pred)
+        H = self.loss.hess(y, y_pred)
+        return -0.5 * (G ** 2 / H)
+
