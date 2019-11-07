@@ -12,3 +12,57 @@ def softmax(y):
 
 def is_numerical(val):
     return isinstance(val, int) or isinstance(val, float)
+
+
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+
+class MSE:
+
+    @classmethod
+    def loss(cls, y, y_pred=None):
+        if y_pred is None:
+            y_pred = np.zeros_like(y, dtype=float)
+        loss = 0.5 * (y - y_pred) ** 2
+        return loss.sum(0)
+
+    @classmethod
+    def grad(cls, y, y_pred=None):
+        if y_pred is None:
+            y_pred = np.zeros_like(y, dtype=float)
+        grad = y_pred - y
+        return grad.sum(0)
+
+    @classmethod
+    def hess(cls, y, y_pred=None):
+        if y_pred is None:
+            y_pred = np.zeros_like(y, dtype=float)
+        hess = np.ones_like(y_pred)
+        return hess.sum(0)
+
+
+class MAE:
+    pass
+
+class Logistic:
+    
+    @classmethod
+    def loss(cls, y, y_pred):
+        p = sigmoid(y_pred)
+        loss = y * np.log(p) + (1 - y) * np.log(1 - p)
+        return loss.sum(0)
+
+    @classmethod
+    def grad(cls, y, y_pred):
+        p = sigmoid(y_pred)
+        grad = -(y - p)
+        return grad.sum(0)
+
+    @classmethod
+    def hess(cls, y, y_pred):
+        p = sigmoid(y_pred)
+        hess = p * (1 - p)
+        return hess.rum(0)
+
