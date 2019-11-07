@@ -29,33 +29,33 @@ class GradientBoosting:
         self.learners = [DecisionTreeRegressor(**tree_params) 
                          for _ in range(self.n_estimators)]
         self.feature_importances_ = None
-        self._raw_feat_imps = None
+        self.feature_scores_ = None
 
     def fit(self, x, y):
-        self._raw_feat_imps = np.zeros(x.shape[1], dtype=float)
+        self.feature_scores_ = np.zeros(x.shape[1], dtype=float)
         self.y_dim = y.shape[1]
         F = np.zeros_like(y, dtype=float)
         for i in range(self.n_estimators):
-            neg_grad = self._neg_grad_func(y, F)
             # fit gradient
-            self.learners[i].fit(x, neg_grad)
+            self.learners[i].fit(x, y=self._negative_grad(y, F))
             # update F
-            neg_grad_preds = self.learners[i].predict(x)
-            F += self.lr * neg_grad_preds
+            f_pred = self.learners[i].predict(x)
+            F += self.lr * f_pred
             # update feature importances
-            self._raw_feat_imps += self.learners[i]._raw_feat_imps
+            self.feature_scores_ += self.learners[i].feature_scores_
+
         # normalize feature importances
         self.feature_importances_ = (
-            self._raw_feat_imps / self._raw_feat_imps.sum())
+                self.feature_scores_ / self.feature_scores_.sum())
 
     def predict(self, x):
         F = np.zeros((x.shape[0], self.y_dim), dtype=float)
         for i, learner in enumerate(self.learners):
-            neg_grad_preds = learner.predict(x)
-            F += self.lr * neg_grad_preds
+            f_pred = learner.predict(x)
+            F += self.lr * f_pred
         return F
 
-    def _neg_grad_func(self, y, F):
+    def _negative_grad(self, y, F):
         raise NotImplementedError
 
 
@@ -76,8 +76,8 @@ class GradientBoostingClassifier(GradientBoosting):
 
         func_dict = {"deviance": self.__deviance,
                      "exponential": self.__exponential}
-        assert loss in grad_func_dict
-        self._neg_grad_func = func_dict[loss]
+        assert loss in func_dict
+        self._negative_grad = func_dict[loss]
 
     @staticmethod
     def __deviance(y, F):
@@ -118,7 +118,7 @@ class GradientBoostingRegressor(GradientBoosting):
                      "huber": self.__huber,
                      "quantile": self.__quantile}
         assert loss in func_dict
-        self._neg_grad_func = func_dict[loss]
+        self._negative_grad = func_dict[loss]
 
     @staticmethod
     def __ls(y, F):

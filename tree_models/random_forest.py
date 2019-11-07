@@ -25,15 +25,16 @@ class RandomForest:
             "max_depth": max_depth}
         self.learners = None
         self.feature_importances_ = None
-        self._raw_feat_imps = None
+        self.feature_scores_ = None
 
     def fit(self, x, y):
-        self._raw_feat_imps = np.zeros(x.shape[1], dtype=float)
+        self.feature_scores_ = np.zeros(x.shape[1], dtype=float)
         for i in range(self.n_estimators):
             self.learners[i].fit(x, y)
-            self._raw_feat_imps += self.learners[i]._raw_feat_imps
+            self.feature_scores_ += self.learners[i].feature_scores_
+
         self.feature_importances_ = (
-            self._raw_feat_imps / self._raw_feat_imps.sum())
+                self.feature_scores_ / self.feature_scores_.sum())
 
     def predict(self, x):
         return np.array([l.predict(x) for l in self.learners])
