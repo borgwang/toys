@@ -28,22 +28,30 @@ class GradientBoosting:
 
         self.learners = [DecisionTreeRegressor(**tree_params) 
                          for _ in range(self.n_estimators)]
+        self.feature_importances_ = None
+        self._raw_feat_imps = None
 
-    def fit(self, X, y):
+    def fit(self, x, y):
+        self._raw_feat_imps = np.zeros(x.shape[1], dtype=float)
         self.y_dim = y.shape[1]
         F = np.zeros_like(y, dtype=float)
         for i in range(self.n_estimators):
             grads = self._gradient_func(y, F)
             # fit gradient
-            self.learners[i].fit(X, grads)
+            self.learners[i].fit(x, grads)
             # update F
-            grads_preds = self.learners[i].predict(X)
+            grads_preds = self.learners[i].predict(x)
             F -= self.lr * grads_preds
+            # update feature importances
+            self._raw_feat_imps += self.learners[i]._raw_feat_imps
+        # normalize feature importances
+        self.feature_importances_ = (
+            self._raw_feat_imps / self._raw_feat_imps.sum())
 
-    def predict(self, X):
-        F = np.zeros((X.shape[0], self.y_dim), dtype=float)
+    def predict(self, x):
+        F = np.zeros((x.shape[0], self.y_dim), dtype=float)
         for i, learner in enumerate(self.learners):
-            grads_preds = learner.predict(X)
+            grads_preds = learner.predict(x)
             F -= self.lr * grads_preds
         return F
 
@@ -80,12 +88,12 @@ class GradientBoostingClassifier(GradientBoosting):
         # TODO
         pass
 
-    def fit(self, X, y):
+    def fit(self, x, y):
         y = get_one_hot(y, len(np.unique(y)))
-        super().fit(X, y)
+        super().fit(x, y)
 
-    def predict(self, X):
-        preds = super().predict(X)
+    def predict(self, x):
+        preds = super().predict(x)
         probs = softmax(preds)
         return np.argmax(probs, 1).reshape(-1, 1)
 
