@@ -18,33 +18,31 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-
 class MSE:
 
     @classmethod
-    def loss(cls, y, y_pred=None):
-        if y_pred is None:
-            y_pred = np.zeros_like(y, dtype=float)
+    def loss(cls, y, y_pred):
         loss = 0.5 * (y - y_pred) ** 2
         return loss.sum(0)
 
     @classmethod
-    def grad(cls, y, y_pred=None):
-        if y_pred is None:
-            y_pred = np.zeros_like(y, dtype=float)
+    def grad(cls, y, y_pred):
         grad = y_pred - y
         return grad.sum(0)
 
     @classmethod
-    def hess(cls, y, y_pred=None):
-        if y_pred is None:
-            y_pred = np.zeros_like(y, dtype=float)
+    def hess(cls, y, y_pred):
         hess = np.ones_like(y_pred)
         return hess.sum(0)
 
 
 class MAE:
-    pass
+
+    @classmethod
+    def loss(cls, y, y_pred):
+        loss = np.abs(y - y_pred)
+        return loss.sum(0)
+
 
 class Logistic:
     
