@@ -2,11 +2,9 @@ from collections import Counter
 
 import numpy as np
 
-from utils import is_numerical
-from utils import Logistic
 from utils import MAE
 from utils import MSE
-from utils import sigmoid
+from utils import is_numerical
 
 
 class DTNode:

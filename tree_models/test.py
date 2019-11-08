@@ -12,8 +12,7 @@ from gradient_boosting import GradientBoostingClassifier
 from gradient_boosting import GradientBoostingRegressor
 from random_forest import RandomForestClassifier
 from random_forest import RandomForestRegressor
-
-#from xgboost import XGBoostGradientBoostingClassifier
+from xgboost import XGBoostClassifier
 from xgboost import XGBoostRegressor
 
 
@@ -107,6 +106,8 @@ def test_rf_classifier():
     test_preds = model.predict(test_x)
     print("feat_importances-mine: ", model.feature_importances_)
 
+    train_y = train_y.ravel()
+    test_y = test_y.ravel()
     model = ensemble.RandomForestClassifier(n_estimators=10)
     model.fit(train_x, train_y)
     test_preds2 = model.predict(test_x)
@@ -124,6 +125,8 @@ def test_rf_regressor():
     test_preds = model.predict(test_x)
     print("feat_importances-mine: ", model.feature_importances_)
 
+    train_y = train_y.ravel()
+    test_y = test_y.ravel()
     model = ensemble.RandomForestRegressor(n_estimators=10)
     model.fit(train_x, train_y)
     test_preds2 = model.predict(test_x)
@@ -133,15 +136,17 @@ def test_rf_regressor():
     print("mse-sklearn: %.4f" % mse_score(test_y, test_preds2))
 
 
-def test_xgbdt_regressor():
+def test_xgboost_regressor():
     train_x, test_x, train_y, test_y = get_regression_dataset()
 
-    model = XGBoostRegressor(n_estimators=10)
+    model = XGBoostRegressor(max_depth=3, n_estimators=50)
     model.fit(train_x, train_y)
     test_preds = model.predict(test_x)
     print("feat_importances-mine: ", model.feature_importances_)
 
-    model = ensemble.GradientBoostingRegressor(n_estimators=10)
+    train_y = train_y.ravel()
+    test_y = test_y.ravel()
+    model = ensemble.GradientBoostingRegressor(max_depth=3, n_estimators=50)
     model.fit(train_x, train_y)
     test_preds2 = model.predict(test_x)
     print("feat_importances-sklearn: ", model.feature_importances_)
@@ -150,12 +155,30 @@ def test_xgbdt_regressor():
     print("mse-sklearn: %.4f" % mse_score(test_y, test_preds2))
 
 
-if __name__ == "__main__":
-    #test_dt_classifier()
-    #test_dt_regressor()
-    #test_gbdt_classifier()
-    #test_gbdt_regressor()
-    #test_rf_classifier()
-    #test_rf_regressor()
-    test_xgbdt_regressor()
+def test_xgboost_classifier():
+    train_x, test_x, train_y, test_y = get_classification_dataset()
 
+    model = XGBoostClassifier()
+    model.fit(train_x, train_y)
+    test_preds = model.predict(test_x)
+    print("feat_importances-mine: ", model.feature_importances_)
+    print("acc-mine: %.4f" % accuracy_score(test_y, test_preds))
+
+    train_y = train_y.ravel()
+    test_y = test_y.ravel()
+    model = ensemble.GradientBoostingClassifier()
+    model.fit(train_x, train_y)
+    test_preds2 = model.predict(test_x)
+    print("feat_importances-sklearn: ", model.feature_importances_)
+    print("acc-sklearn: %.4f" % accuracy_score(test_y, test_preds2))
+
+
+if __name__ == "__main__":
+    test_dt_classifier()
+    test_dt_regressor()
+    test_gbdt_classifier()
+    test_gbdt_regressor()
+    test_rf_classifier()
+    test_rf_regressor()
+    test_xgboost_regressor()
+    test_xgboost_classifier()

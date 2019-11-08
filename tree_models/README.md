@@ -9,3 +9,5 @@ Implement Tree-based machine learning models with sklearn-like API
 - Boosting
   - GradientBoostingClassifier
   - GradientBoostingRegressor
+  - XGBoostClassifier
+  - XGBoostRegressor

@@ -63,4 +63,3 @@ class Logistic:
         p = sigmoid(y_pred)
         hess = p * (1 - p)
         return hess.rum(0)
-
