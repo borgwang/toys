@@ -26,8 +26,8 @@ def gan_augment(x, y, n_samples=None):
     if n_samples is None:
         n_samples = len(x)
 
-    lr = 0.01
-    num_ep = 100
+    lr = 3e-4
+    num_ep = 300
     z_dim = 100
     model_path = "./checkpoint.pth"
 
@@ -35,8 +35,8 @@ def gan_augment(x, y, n_samples=None):
     G = Generator(z_dim).to(device)
     D = Discriminator(z_dim).to(device)
     bce_loss = nn.BCELoss()
-    G_optim = optim.Adam(G.parameters(), lr=lr*5)
-    D_optim = optim.Adam(D.parameters(), lr=lr)
+    G_optim = optim.Adam(G.parameters(), lr=lr*3, betas=(0.5, 0.999))
+    D_optim = optim.Adam(D.parameters(), lr=lr, betas=(0.5, 0.999))
 
     batch = 64
     train_x = torch.Tensor(x)
@@ -49,13 +49,13 @@ def gan_augment(x, y, n_samples=None):
     else:
         print("training a new GAN...")
         for epoch in range(num_ep):
-            for _ in range(len(train_x) // 8):
+            for _ in range(len(train_x) // batch):
                 idx = np.random.choice(range(len(train_x)), batch)
                 batch_x = train_x[idx].to(device)
                 batch_labels = train_labels[idx].to(device)
 
-                y_real = torch.ones(batch)
-                y_fake = torch.zeros(batch)
+                y_real = torch.ones(batch).to(device)
+                y_fake = torch.zeros(batch).to(device)
 
                 # train D with real images
                 D.zero_grad()
@@ -63,8 +63,8 @@ def gan_augment(x, y, n_samples=None):
                 D_real_loss = bce_loss(D_real_out, y_real)
 
                 # train D with fake images
-                z_ = torch.randn((batch, z_dim)).view(-1, z_dim, 1, 1)
-                fake_labels = torch.randint(0, 10, (batch,))
+                z_ = torch.randn((batch, z_dim)).view(-1, z_dim, 1, 1).to(device)
+                fake_labels = torch.randint(0, 10, (batch,)).to(device)
                 G_out = G(z_, fake_labels)
 
                 D_fake_out = D(G_out, fake_labels).squeeze()
@@ -75,23 +75,23 @@ def gan_augment(x, y, n_samples=None):
 
                 # train G
                 G.zero_grad()
-                z_ = torch.randn((batch, 100)).view(-1, 100, 1, 1)
-                fake_labels = torch.randint(0, 10, (batch,))
+                z_ = torch.randn((batch, z_dim)).view(-1, z_dim, 1, 1).to(device)
+                fake_labels = torch.randint(0, 10, (batch,)).to(device)
                 G_out = G(z_, fake_labels)
                 D_out = D(G_out, fake_labels).squeeze()
                 G_loss = bce_loss(D_out, y_real)
                 G_loss.backward()
                 G_optim.step()
 
-            plot2img(G_out[:50])
+            plot2img(G_out[:50].cpu())
             print("epoch: %d G_loss: %.2f D_loss: %.2f" % 
                   (epoch, G_loss, D_loss))
-            state = {"G": G.state_dict(), "D": D.state_dict()}
-            torch.save(state, model_path)
+        state = {"G": G.state_dict(), "D": D.state_dict()}
+        torch.save(state, model_path)
 
     with torch.no_grad():
-        z_ = torch.randn((batch, 100)).view(-1, 100, 1, 1)
-        fake_labels = torch.randint(0, 10, (n_samples,))
+        z_ = torch.randn((n_samples, z_dim)).view(-1, z_dim, 1, 1).to(device)
+        fake_labels = torch.randint(0, 10, (n_samples,)).to(device)
         G_samples = G(z_, fake_labels)
-        samples = G_samples.numpy().reshape((-1, 28, 28, 1))
-    return samples, fake_labels.numpy()
+        samples = G_samples.cpu().numpy().reshape((-1, 28, 28, 1))
+    return samples, fake_labels.cpu().numpy()
