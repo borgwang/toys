@@ -15,7 +15,7 @@ import torch.optim as optim
 
 from gan_augmentation import gan_augment
 from vae_augmentation import vae_augment
-from dl_models import LeNet, MnistResNet
+from dl_models import LeNet, MnistResNet, SiameseNet
 from utils import make_dataset
 
 
@@ -143,6 +143,81 @@ def deep_learning(dataset):
     fit_and_evaluate(dataset, MnistResNet())
 
 
+def siamese_net(dataset):
+    """buggy"""
+
+    def preprocess(dataset, data_augmentation=True):
+        train_x, train_y, test_x, test_y = dataset
+        train_x = train_x.reshape((-1, 28, 28, 1))
+        test_x = test_x.reshape((-1, 28, 28, 1))
+
+        if data_augmentation:
+            n_samples = 1024
+            # data augmentation with Augmentor
+            p = Augmentor.Pipeline()
+            p.set_seed(args.seed)
+            p.rotate(probability=0.5, max_left_rotation=10, max_right_rotation=10)
+            p.random_distortion(probability=0.8, grid_width=3, grid_height=3, magnitude=2)
+            p.skew(probability=0.8, magnitude=0.3)
+            p.shear(probability=0.5, max_shear_left=3, max_shear_right=3)
+            generator = p.keras_generator_from_array(train_x, train_y, n_samples, scaled=False)
+
+            origin_x, origin_y = train_x, train_y
+            train_x, train_y = next(generator)
+            train_x = np.clip(train_x, 0, 1)
+
+        # convert to tensr
+        train_x = torch.Tensor(train_x.reshape((-1, 784)))
+        origin_x = torch.Tensor(origin_x.reshape((-1, 784)))
+        test_x = torch.Tensor(test_x.reshape(-1, 784))
+        train_y = torch.LongTensor(train_y)
+        origin_y = torch.LongTensor(origin_y)
+        test_y = torch.LongTensor(test_y)
+        return train_x, train_y, test_x, test_y, origin_x, origin_y
+
+    def fit_and_evaluate(dataset, net):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        net = net.to(device)
+
+        train_x, train_y, test_x, test_y, origin_x, origin_y = dataset
+        criterion = nn.BCELoss()
+        optimizer = optim.Adam(net.parameters(), lr=args.lr)
+        batch = 128
+        running_loss = 0
+        for epoch in range(args.num_ep):
+            for i in range(len(train_x) // batch):
+                idx = np.random.choice(range(len(train_x)), batch * 2)
+                x, y = train_x[idx].to(device), train_y[idx].to(device)
+                x1, x2 = torch.split(x, batch, dim=0)
+                y1, y2 = torch.split(y, batch, dim=0)
+                y = (y1 == y2).float()
+
+                optimizer.zero_grad()
+                out = net(x1, x2)
+                loss = criterion(out, y)
+                loss.backward()
+                optimizer.step()
+                train_loss = loss.item()
+                running_loss = 0.99 * running_loss + 0.01 * train_loss
+            if epoch % 20 == 0:
+                print(running_loss)
+
+        batch = 1000
+        preds = []
+        with torch.no_grad():
+            x_, y_ = origin_x.to(device), origin_y.to(device)
+            for i in range(0, len(test_x), batch):
+                x = test_x[i: i+batch].to(device)
+                y = test_y[i: i+batch].to(device)
+                out = net.predict(x, x_, y_)
+                preds.extend(out.argmax(1).cpu().numpy().tolist())
+        print("accuracy: %.4f" % accuracy_score(
+            test_y.cpu().numpy().tolist(), preds))
+
+    dataset = preprocess(dataset, data_augmentation=True)
+    fit_and_evaluate(dataset, SiameseNet())
+
+
 def main():
     # seed
     np.random.seed(args.seed)
@@ -152,7 +227,8 @@ def main():
     # dataset
     dataset = make_dataset()
     #statistical_ml(dataset)
-    deep_learning(dataset)
+    #deep_learning(dataset)
+    #siamese_net(dataset)
 
 
 if __name__ == '__main__':

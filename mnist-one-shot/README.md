@@ -22,4 +22,4 @@ Experiment on training a MNIST classifier with only 10 samples.
   - Transfer learning
   - Hyper-parameter optimization
 
-
+- Siamese neural networks

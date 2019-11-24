@@ -5,6 +5,37 @@ import torch.nn.functional as F
 from torchvision.models.resnet import ResNet, BasicBlock
 
 
+class SiameseNet(nn.Module):
+    
+    def __init__(self):
+        super().__init__()
+        self.head1 = nn.Linear(784, 128)
+        self.head2 = nn.Linear(784, 128)
+        self.body = nn.Sequential(
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(256, 512),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Dropout(0.75),
+            nn.Linear(256, 128))
+        self.tail = nn.Linear(128, 1)
+
+    def forward(self, x1, x2):
+        out1 = self.body(F.relu(self.head1(x1)))
+        out2 = self.body(F.relu(self.head2(x2)))
+        distance = torch.abs(out1 - out2)
+        out = torch.sigmoid(self.tail(distance))
+        return out
+
+    def predict(self, x1, x_, y_):
+        probs = [self.forward(x1, x2) for x2 in x_]
+        return torch.cat(probs, 1)
+
+
 class MnistResNet(ResNet):
 
     def __init__(self):
@@ -122,7 +153,7 @@ class VAE(nn.Module):
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
-        return mu + eps*std
+        return mu + eps * std
 
     def decode(self, z):
         h3 = F.relu(self.fc3(z))
