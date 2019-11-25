@@ -6,7 +6,6 @@ import sys
 from urllib.error import URLError
 from urllib.request import urlretrieve
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 

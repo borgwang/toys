@@ -11,11 +11,11 @@ from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 
-from gan_augmentation import gan_augment
-from vae_augmentation import vae_augment
-from dl_models import LeNet, MnistResNet, SiameseNet
+from gan_augment import gan_augment
+from nets import LeNet, MnistResNet, SiameseNet
 from utils import make_dataset
 
 
@@ -36,7 +36,7 @@ def statistical_ml(dataset):
         train_x, train_y, test_x, test_y = dataset
         model.fit(train_x, train_y)
         test_pred = model.predict(test_x)
-        print("accuray: %.4f" % accuracy_score(test_y, test_pred))
+        print("accuracy: %.4f" % accuracy_score(test_y, test_pred))
 
     # statistical ML models
     print("\nRandomForestClassifier")
@@ -66,11 +66,11 @@ def deep_learning(dataset):
         train_x, train_y, test_x, test_y = dataset
         train_x = train_x.reshape((-1, 28, 28, 1))
         test_x = test_x.reshape((-1, 28, 28, 1))
-        plot_samples(train_x, "./origin.png")
+        plot_samples(train_x, "./origin-%d.png" % args.seed)
 
         if data_augmentation:
             n_samples = 1024
-            # data augmentation with Augmentor
+            # data augmentation
             p = Augmentor.Pipeline()
             p.set_seed(args.seed)
             p.rotate(probability=0.5, max_left_rotation=10, max_right_rotation=10)
@@ -83,15 +83,11 @@ def deep_learning(dataset):
             train_x = np.clip(train_x, 0, 1)
             plot_samples(train_x[:50], "./data_augmentation.png")
 
-
         if args.gan_ratio > 0:
             n_samples = int(args.gan_ratio * len(train_x))
-            a_x, a_y = gan_augment(train_x, train_y, n_samples)
+            a_x, a_y = gan_augment(train_x, train_y, args.seed, n_samples)
             train_x = np.concatenate([train_x, a_x])
             train_y = np.concatenate([train_y, a_y])
-
-        #train_feat = vae_augment(train_x)
-        #test_feat = vae_augment(test_x)
 
         # convert to NCWH tensor
         train_x = np.transpose(train_x, (0, 3, 1, 2))
@@ -100,23 +96,25 @@ def deep_learning(dataset):
         test_x = torch.Tensor(test_x)
         train_y = torch.LongTensor(train_y)
         test_y = torch.LongTensor(test_y)
-        #return train_x, train_y, test_x, test_y, train_feat, test_feat
         return train_x, train_y, test_x, test_y
 
     def fit_and_evaluate(dataset, net):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         net = net.to(device)
-        #train_x, train_y, test_x, test_y, train_feat, test_feat = dataset
         train_x, train_y, test_x, test_y = dataset
+
+        # resize image to (224, 224, 1) to fit resnet
+        train_x = F.interpolate(train_x, size=224)
+        test_x = F.interpolate(test_x, size=224)
+
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(net.parameters(), lr=args.lr)
+        optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=0.001)
         batch = 64
         running_loss = 0
         for epoch in range(args.num_ep):
             for i in range(len(train_x) // batch):
                 idx = np.random.choice(range(len(train_x)), batch)
                 x, y = train_x[idx].to(device), train_y[idx].to(device)
-                #feat = train_feat[idx].to(device)
                 optimizer.zero_grad()
                 out = net(x)
                 loss = criterion(out, y)
@@ -127,20 +125,19 @@ def deep_learning(dataset):
             if epoch % 20 == 0:
                 print(running_loss)
 
-        batch = 1000
+        batch = 100
         preds = []
         with torch.no_grad():
             for i in range(0, len(test_x), batch):
                 x = test_x[i: i+batch].to(device)
-                y = test_y[i: i+batch].to(device)
-                #feat = test_feat[i: i+batch].to(device)
                 out = net(x)
                 preds.extend(out.argmax(1).cpu().numpy().tolist())
         print("accuracy: %.4f" % accuracy_score(
             test_y.cpu().numpy().tolist(), preds))
 
-    dataset = preprocess(dataset)
+    dataset = preprocess(dataset, data_augmentation=True)
     fit_and_evaluate(dataset, MnistResNet())
+    # fit_and_evaluate(dataset, LeNet())
 
 
 def siamese_net(dataset):
@@ -208,8 +205,7 @@ def siamese_net(dataset):
             x_, y_ = origin_x.to(device), origin_y.to(device)
             for i in range(0, len(test_x), batch):
                 x = test_x[i: i+batch].to(device)
-                y = test_y[i: i+batch].to(device)
-                out = net.predict(x, x_, y_)
+                out = net.predict(x, x_)
                 preds.extend(out.argmax(1).cpu().numpy().tolist())
         print("accuracy: %.4f" % accuracy_score(
             test_y.cpu().numpy().tolist(), preds))
@@ -223,12 +219,12 @@ def main():
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.deterministic = True
     # dataset
     dataset = make_dataset()
-    #statistical_ml(dataset)
-    #deep_learning(dataset)
-    #siamese_net(dataset)
+    # statistical_ml(dataset)
+    deep_learning(dataset)
+    # siamese_net(dataset)
 
 
 if __name__ == '__main__':
@@ -236,7 +232,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=31)
     parser.add_argument("--lr", type=float, default=3e-3)
-    parser.add_argument("--num_ep", type=int, default=300)
+    parser.add_argument("--num_ep", type=int, default=301)
     parser.add_argument("--gan_ratio", type=float, default=0)
     args = parser.parse_args()
     main()

@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from dl_models import Discriminator
-from dl_models import Generator
+from nets import Discriminator
+from nets import Generator
 
 
 def plot2img(tensors):
@@ -22,14 +22,14 @@ def plot2img(tensors):
     plt.close()
 
 
-def gan_augment(x, y, n_samples=None):
+def gan_augment(x, y, seed, n_samples=None):
     if n_samples is None:
         n_samples = len(x)
 
     lr = 3e-4
     num_ep = 300
     z_dim = 100
-    model_path = "./checkpoint.pth"
+    model_path = "./gan_checkpoint_%d.pth" % seed
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     G = Generator(z_dim).to(device)
