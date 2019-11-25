@@ -1,0 +1,5 @@
+*.pth
+*.swp
+*.png
+__pycache__
+data
