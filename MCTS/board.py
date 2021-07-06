@@ -125,6 +125,7 @@ class Board(object):
             return True
 
         # Otherwise, we must play in the proper sub-board.
+        print R, C, state[20], state[21]
         return (R, C) == (state[20], state[21])
 
     def legal_actions(self, history):

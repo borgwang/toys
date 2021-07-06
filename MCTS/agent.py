@@ -1,7 +1,7 @@
 from __future__ import division
 
 import time
-from random import choice
+import random
 from math import log, sqrt
 
 
@@ -11,6 +11,7 @@ class Node(object):
     def __init__(self, score=0, visits=0):
         self.score = score
         self.visits = visits
+
 
 class UCT(object):
     def __init__(self, board, **kwargs):
@@ -87,7 +88,7 @@ class UCT(object):
                     for a, S in actions_states
                 )
             else:
-                action, state = choice(actions_states)
+                action, state = random.choice(actions_states)
             history_copy.append(state)
 
             # player here refers to the player who moves into that particular state
@@ -149,3 +150,17 @@ class Human(object):
             else:
                 break
         return action
+
+
+class Random(object):
+
+    def __init__(self, board, **kwargs):
+        self.board = board
+        self.player = None
+        self.history = []
+
+    def update(self, state):
+        self.history.append(state)
+
+    def get_action(self):
+        return random.choice(self.board.legal_actions(self.history))

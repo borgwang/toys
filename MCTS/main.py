@@ -2,10 +2,10 @@ import argparse
 from itertools import cycle
 
 from board import Board
-from agent import UCT, Human
+from agent import UCT, Human, Random
 
 class Game(object):
-    agent_map = {'human': Human, 'ai': UCT}
+    agent_map = {'human': Human, 'ai': UCT, 'random': Random}
 
     def __init__(self, board, args):
         self.history = []
@@ -51,9 +51,9 @@ class Game(object):
 def args_parse():
         parser = argparse.ArgumentParser()
         parser.add_argument('--p1', default='human', help=
-                'player1 (*human | ai)')
+                'player1 (*human|ai|random)')
         parser.add_argument('--p2', default='ai', help=
-                'player2 (human | *ai)')
+                'player2 (human|*ai|random)')
         parser.add_argument('--time_limit', default=30, help=
                 'time_limit for ai to think')
         return parser.parse_args()
