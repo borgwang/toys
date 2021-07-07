@@ -80,7 +80,7 @@ class UCT(object):
 
             if all((player, S) in nodes for a, S in actions_states):
                 log_total = log(
-                    sum(nodes[(player, S)].visits for a, S in actions_states)or 1)
+                    sum(nodes[(player, S)].visits for a, S in actions_states) or 1)
                 # UCB core formula (first part: exploit   second part: explore)
                 score, action, state = max(
                     ((nodes[(player, S)].score / nodes[(player, S)].visits or 1) +
@@ -88,7 +88,9 @@ class UCT(object):
                     for a, S in actions_states
                 )
             else:
-                action, state = random.choice(actions_states)
+                unvisited = [(a, S) for a, S in actions_states
+                                if (player, S) not in nodes]
+                action, state = random.choice(unvisited)
             history_copy.append(state)
 
             # player here refers to the player who moves into that particular state

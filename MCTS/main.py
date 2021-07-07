@@ -5,7 +5,7 @@ from board import Board
 from agent import UCT, Human, Random
 
 class Game(object):
-    agent_map = {'human': Human, 'ai': UCT, 'random': Random}
+    agent_map = {'human': Human, 'uct': UCT, 'random': Random}
 
     def __init__(self, board, args):
         self.history = []
@@ -14,7 +14,7 @@ class Game(object):
             agent1 = self.agent_map[args.p1](board, time_limit=args.time_limit)
             agent2 = self.agent_map[args.p2](board, time_limit=args.time_limit)
         except Exception as e:
-            print 'illegal player!!!  (human | ai) is allowed.'
+            print 'illegal player!!!  [human|uct|random] is allowed.'
             raise
         self.agents = [agent1, agent2]
         self.turns = cycle(self.agents)  # take turns to move
@@ -51,10 +51,10 @@ class Game(object):
 def args_parse():
         parser = argparse.ArgumentParser()
         parser.add_argument('--p1', default='human', help=
-                'player1 (*human|ai|random)')
-        parser.add_argument('--p2', default='ai', help=
-                'player2 (human|*ai|random)')
-        parser.add_argument('--time_limit', default=30, help=
+                'player1 (*human|uct|random)')
+        parser.add_argument('--p2', default='uct', help=
+                'player2 (human|*uct|random)')
+        parser.add_argument('--time_limit', default=3, help=
                 'time_limit for ai to think')
         return parser.parse_args()
 
