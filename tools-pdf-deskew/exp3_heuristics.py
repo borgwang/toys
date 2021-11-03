@@ -102,11 +102,13 @@ class ImageRectifier:
                 y_ = y_.astype(int)
 
                 concentration = []
-                offsets = np.arange(h // 4) if side == "top" else np.arange(-1, -h // 4, -1)
+                offsets = np.arange(h // 6) if side == "top" else np.arange(-1, -h // 6, -1)
                 for offset in offsets:
                     concentration.append(np.mean(arr[y_ + offset, x_]))
 
-                variance = np.var(concentration)
+                concentration = np.array(concentration)
+                variance = ((concentration[1:] - concentration[:-1]) ** 2).sum()
+                #variance = np.var(concentration)
                 if variance > best_var:
                     best_var = variance
                     best_offset = offsets[self._change_point_detection(concentration)]
@@ -217,15 +219,18 @@ class ImageRectifier:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--pdf", type=str, default="./test.pdf")
-    parser.add_argument("--page", type=int, default=0)
+    parser.add_argument("--first_page", type=int, default=0)
+    parser.add_argument("--n_pages", type=int, default=1)
     parser.add_argument("--scale", type=int, default=4)
     parser.add_argument("--dpi", type=int, default=200)
     parser.add_argument("--eval", type=int, default=1)
     parser.add_argument("--plot", type=int, default=1)
     args = parser.parse_args()
 
-    img = convert_from_path(args.pdf, thread_count=10, first_page=args.page,
-                            last_page=args.page + 1, grayscale=True, dpi=args.dpi)[0]
-    arr = np.array(img)
+    imgs = convert_from_path(args.pdf, thread_count=10, first_page=args.first_page,
+                             last_page=args.first_page + args.n_pages,
+                             grayscale=True, dpi=args.dpi)
     rectifier = ImageRectifier(scale_factor=args.scale, plot_flag=args.plot)
-    rectifier.run(arr)
+    for img in imgs:
+        arr = np.array(img)
+        rectifier.run(arr)

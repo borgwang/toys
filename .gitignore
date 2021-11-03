@@ -4,3 +4,5 @@ _site
 *.swp
 __pycache__
 .DS_Store
+
+tools-pdf-deskew/*.pdf
