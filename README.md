@@ -1,1 +1,1 @@
-This repo contains some of my toy projects, experiments for fun and learning notes.
+Repo for some of my toy projects, random experiments and learning notes.
