@@ -9,7 +9,7 @@ Visualize optimizing trajectories of different popular optimization methods in d
 - AdadeltaOptimizer
 - MomentumOptimizer
 
-![img](https://raw.githubusercontent.com/borgwang/toys/master/visualize_optimization_methods/optimization_methods.gif)
+![img](https://raw.githubusercontent.com/borgwang/toys/master/visualization-optimization-methods/optimization_methods.gif)
 
 
 
