@@ -4,5 +4,5 @@ _site
 *.swp
 __pycache__
 .DS_Store
-
+.ipynb_checkpoints
 tools-pdf-deskew/*.pdf
