@@ -1,6 +1,6 @@
 ### mnist-one-shot
 
-Experiment code on training a MNIST classifier with only 10 samples.
+Experiment code on training a MNIST classifier with only 10 samples. See my blog post (in Chinese) [here](https://borgwang.github.io/dl/2019/11/29/mnist-one-shot.html).
 
 #### Results
 
