@@ -104,7 +104,7 @@ function readCsv(path: string): string[][] {
 }
 
 function prepareDataset(): {train: Dataset, test: Dataset} {
-  let data: string[][] = readCsv("./iris.data")
+  let data: string[][] = readCsv("../data/iris.data")
   let labels: number[][] = []
   let feats: number[][] = []
   let numColumns = data[0].length
@@ -154,6 +154,8 @@ function prepareDataset(): {train: Dataset, test: Dataset} {
     meanX.push(mean)
     stdX.push(std)
   }
+  console.log(`mean: ${meanX}`)
+  console.log(`std: ${stdX}`)
   // normalize trainX and testX with mean and std
   trainX = trainX.map(feat => feat.map((f, i) => (f - meanX[i]) / stdX[i]))
   testX = testX.map(feat => feat.map((f, i) => (f - meanX[i]) / stdX[i]))
