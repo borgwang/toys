@@ -77,22 +77,11 @@ void swap(float *a, float *b, int size) {
 void MatMul(int M, int N, int K, float *A, float *B, float *ret) {
   for (int m = 0; m < M; m++) {
     for (int n = 0; n < N; n++) {
-      //ret[m][n] = 0.0;
       *(ret + m * N + n) = 0.0;
       for (int k = 0; k < K; k++) {
-        //ret[m][n] += A[m][k] * B[k][n];
         *(ret + m * N + n) += *(A + m * K + k) * *(B + k * N + n);
       }
     }
-  }
-}
-
-void PrintMatrix(int M, int N, float *A) {
-  for (int i = 0; i < M; i++) {
-    for (int j = 0; j < N; j++) {
-      printf("%f ", *(A + i * N + j));
-    }
-    printf("\n");
   }
 }
 
@@ -305,19 +294,15 @@ int main(void) {
     }
   }
 
-  // weight initialization
   Params params;
   InitializeParams(&params);
-
-  // training
-  int testSize = N_EXAMPLES - trainSize;
   for (int epoch = 0; epoch < N_EPOCH; epoch++) {
     for (int step = 0; step < trainSize / BS; step++) {
       trainBatch(&feats[step * BS][0], &labels[step * BS][0], &params);
     }
     if (epoch % 100 == 0) {
       printf("epoch %d ", epoch);
-      evaluate(&feats[trainSize][0], &labels[trainSize][0], &params, testSize);
+      evaluate(&feats[trainSize][0], &labels[trainSize][0], &params, N_EXAMPLES - trainSize);
     }
   }
   return 0;
