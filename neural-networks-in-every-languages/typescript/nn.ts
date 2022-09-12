@@ -180,10 +180,14 @@ function getNLLLoss(probs: number[][], labels: number[][]): number {
   return mMean(nll)
 }
 
+function argMax(array: number[]): number {
+  return array.map((num, idx) => [idx, num]).reduce((a, b) => (a[1] > b[1] ? a : b))[0]
+}
+
 function train(params: Params, dataset: Dataset) {
   let numSamples = dataset.x.length
   // forward
-  let h1 = mMatMul(dataset.x, params.w1) 
+  let h1 = mMatMul(dataset.x, params.w1)
   let b1 = Array(numSamples).fill(params.b1[0])
   h1 = mElemwise((a, b) => (a + b), h1, b1)
 
@@ -194,7 +198,7 @@ function train(params: Params, dataset: Dataset) {
 
   let probs = softmax(logits)
   let loss = getNLLLoss(probs, dataset.y)
-  console.log("loss: " + loss)
+  //console.log("loss: " + loss)
 
   // backward
   let dLogits = mElemwise((a, b) => (a - b), probs, dataset.y)
@@ -213,13 +217,48 @@ function train(params: Params, dataset: Dataset) {
   params.b2 = mElemwise((a, b) => (a - leanringRate * b), params.b2, db2)
 }
 
-// run 
+function evaluate(params: Params, dataset: Dataset) {
+  let numSamples = dataset.x.length
+  // forward
+  let h1 = mMatMul(dataset.x, params.w1)
+  let b1 = Array(numSamples).fill(params.b1[0])
+  h1 = mElemwise((a, b) => (a + b), h1, b1)
+
+  let a1 = mElemwise(x => x > 0 ? x : 0, h1)
+  let h2 = mMatMul(a1, params.w2)
+  let b2 = Array(numSamples).fill(params.b2[0])
+  let logits = mElemwise((a, b) => (a + b), h2, b2)
+  let probs = softmax(logits)
+  let predLabels = probs.map(argMax)
+  let trueLabels = dataset.y.map(argMax)
+  let precision: number = predLabels
+      .map((pred, i) => Number(pred === trueLabels[i]))
+      .reduce((a, b) => (a + b)) / numSamples
+  console.log(`precisionn: ${precision}`)
+}
+
+// training
 let params = getInitParams(4, 3, 20)
 let dataset = prepareDataset()
+let batchSize = 30
+let trainSize = dataset.train.x.length
 
 const leanringRate = 0.0003
 const numEpochs = 1000
+//const numEpochs = 1
 for (let ep = 0; ep < numEpochs; ep++) {
-  train(params, dataset.train)
+  for (let b = 0; b < trainSize / batchSize; b++) {
+    let batch = {
+      x: dataset.train.x.filter((_, idx) => (idx >= b*batchSize) && (idx < (b+1)*batchSize)),
+      y: dataset.train.y.filter((_, idx) => (idx >= b*batchSize) && (idx < (b+1)*batchSize))
+    }
+    train(params, batch)
+  }
+  if (ep % 100 == 0) {
+    console.log(`epoch ${ep}`)
+    evaluate(params, dataset.test)
+  }
 }
 
+// evaluate
+//
