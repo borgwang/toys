@@ -6,3 +6,5 @@ __pycache__
 .DS_Store
 .ipynb_checkpoints
 tools-pdf-deskew/*.pdf
+
+*.o
