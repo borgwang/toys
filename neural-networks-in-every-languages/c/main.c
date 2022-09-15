@@ -6,7 +6,6 @@
 #include <time.h>
 
 #define N_EXAMPLES 150
-#define N_FEATURES 4
 #define N_EPOCH 1000
 #define IN_DIM 4
 #define OUT_DIM 3
@@ -14,18 +13,18 @@
 #define BS 30
 #define LR 0.0003
 
-typedef struct Params {
+typedef struct params {
   float w1[IN_DIM][HIDDEN_DIM];
   float b1[HIDDEN_DIM];
   float w2[HIDDEN_DIM][OUT_DIM];
   float b2[OUT_DIM];
-} Params;
+} params_t;
 
-void ParseExample(char *line, float *feat, float *label) {
+void parse_example(char *line, float *feat, float *label) {
   const char *tok;
   int i = 0;
-  for (tok=strtok(line, ","); tok; tok=strtok(NULL, ","), i++) {
-    if (i < N_FEATURES) {
+  for (tok = strtok(line, ","); tok; tok=strtok(NULL, ","), i++) {
+    if (i < IN_DIM) {
       feat[i] = strtof(tok, NULL);
       continue;
     }
@@ -39,28 +38,28 @@ void ParseExample(char *line, float *feat, float *label) {
   }
 }
 
-float GetRandom(float left, float right) {
+float random_uniform(float left, float right) {
   float a = rand() / (float)RAND_MAX;
   return (a + left) * (right - left);
 }
 
-int GetRandomInteger(int left, int right) {
+int random_integer(int left, int right) {
   return left + rand() % (right - left);
 }
 
-void InitializeParams(Params *params) {
+void initialize_params(params_t *params) {
   float bound1 = sqrt(6.0 / (IN_DIM + HIDDEN_DIM));
   for (int col = 0; col < HIDDEN_DIM; col++) {
     params->b1[col] = 0.0;
     for (int row = 0; row < IN_DIM; row++) {
-      params->w1[row][col] = GetRandom(-bound1, bound1);
+      params->w1[row][col] = random_uniform(-bound1, bound1);
     }
   }
   float bound2 = sqrt(6.0 / (HIDDEN_DIM + OUT_DIM));
   for (int col = 0; col < OUT_DIM; col++) {
     params->b2[col] = 0.0;
     for (int row = 0; row < HIDDEN_DIM; row++) {
-      params->w2[row][col] = GetRandom(-bound2, bound2);
+      params->w2[row][col] = random_uniform(-bound2, bound2);
     }
   }
 }
@@ -74,7 +73,7 @@ void swap(float *a, float *b, int size) {
   }
 }
 
-void MatMul(int M, int N, int K, float *A, float *B, float *ret) {
+void matmul(int M, int N, int K, float *A, float *B, float *ret) {
   for (int m = 0; m < M; m++) {
     for (int n = 0; n < N; n++) {
       *(ret + m * N + n) = 0.0;
@@ -85,11 +84,10 @@ void MatMul(int M, int N, int K, float *A, float *B, float *ret) {
   }
 }
 
-float OpReLU(float x) { return x > 0.0 ? x : 0.0; }
-float OpAdd(float a, float b) { return a + b; }
-float OpDReLU(float x) { return x > 0.0 ? 1.0 : 0.0; }
+float op_relu(float x) { return x > 0.0 ? x : 0.0; }
+float op_drelu(float x) { return x > 0.0 ? 1.0 : 0.0; }
 
-void UnaryElemwise(int M, int N, float *A, float (*op)(float)) {
+void unary_elemwise(int M, int N, float *A, float (*op)(float)) {
   for (int i = 0; i < M; i++) {
     for (int j = 0; j < N; j++) {
       *(A + i * N + j) = op(*(A + i * N + j));
@@ -97,7 +95,7 @@ void UnaryElemwise(int M, int N, float *A, float (*op)(float)) {
   }
 }
 
-void BinaryElemwise(int M, int N, float *A, float *B, float (*op)(float, float)) {
+void binary_elemwise(int M, int N, float *A, float *B, float (*op)(float, float)) {
   for (int i = 0; i < M; i++) {
     for (int j = 0; j < N; j++) {
       *(A + i * N + j) = op(*(A + i * N + j), *(B + i * N + j));
@@ -105,7 +103,7 @@ void BinaryElemwise(int M, int N, float *A, float *B, float (*op)(float, float))
   }
 }
 
-void MatTranspose(int M, int N, float *A, float *ret) {
+void transpose(int M, int N, float *A, float *ret) {
   for (int i = 0; i < M; i++) {
     for (int j = 0; j < N; j++) {
       *(ret + j * M + i) = *(A + i * N + j);
@@ -127,48 +125,46 @@ void softmax(int M, int N, float *A) {
   }
 }
 
-void trainBatch(float *X, float *Y, Params *params) {
-  // forward
+void train(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], int start) {
+  /* forward */
   float a1[BS][HIDDEN_DIM];
-  MatMul(BS, HIDDEN_DIM, IN_DIM, X, &(params->w1)[0][0], &a1[0][0]);
+  matmul(BS, HIDDEN_DIM, IN_DIM, &feats[start][0], &(params->w1)[0][0], &a1[0][0]);
   for (int i = 0; i < BS; i++) {
     for (int j = 0; j < HIDDEN_DIM; j++) {
       a1[i][j] += params->b1[j];
     }
   }
-  UnaryElemwise(BS, HIDDEN_DIM, &a1[0][0], OpReLU);
+  unary_elemwise(BS, HIDDEN_DIM, &a1[0][0], op_relu);
   float a2[BS][OUT_DIM];
-  MatMul(BS, OUT_DIM, HIDDEN_DIM, &a1[0][0], &(params->w2)[0][0], &a2[0][0]);
+  matmul(BS, OUT_DIM, HIDDEN_DIM, &a1[0][0], &(params->w2)[0][0], &a2[0][0]);
   for (int i = 0; i < BS; i++) {
     for (int j = 0; j < OUT_DIM; j++) {
       a2[i][j] += params->b2[j];
     }
   }
-  // softmax
   softmax(BS, OUT_DIM, &a2[0][0]);
-  // NLL loss
+  /* NLL loss */
   float loss = 0.0;
   for (int i = 0; i < BS; i++) {
     float nll = 0.0;
     for (int j = 0; j < OUT_DIM; j++) {
-      nll += a2[i][j] * (*(Y + i * OUT_DIM + j));
+      nll += a2[i][j] * labels[start + i][j];
     }
     loss += -log(nll);
   }
   loss /= BS;
-  //printf("loss: %f\n", loss);
 
-  // backpropogation
+  /* backward */
   float d_logits[BS][OUT_DIM];
   for (int i = 0; i < BS; i++) {
     for (int j = 0; j < OUT_DIM; j++) {
-      d_logits[i][j] = a2[i][j] - (*(Y + i * OUT_DIM + j));
+      d_logits[i][j] = a2[i][j] - labels[start + i][j];
     }
   }
   float a1_t[HIDDEN_DIM][BS];
-  MatTranspose(BS, HIDDEN_DIM, &a1[0][0], &a1_t[0][0]);
+  transpose(BS, HIDDEN_DIM, &a1[0][0], &a1_t[0][0]);
   float d_w2[HIDDEN_DIM][OUT_DIM];
-  MatMul(HIDDEN_DIM, OUT_DIM, BS, &a1_t[0][0], &d_logits[0][0], &d_w2[0][0]);
+  matmul(HIDDEN_DIM, OUT_DIM, BS, &a1_t[0][0], &d_logits[0][0], &d_w2[0][0]);
   float d_b2[OUT_DIM] = {0.0};
   for (int i = 0; i < BS; i++) {
     for (int j = 0; j < OUT_DIM; j++) {
@@ -177,13 +173,13 @@ void trainBatch(float *X, float *Y, Params *params) {
   }
 
   float d_h1[BS][HIDDEN_DIM];
-  MatMul(BS, HIDDEN_DIM, OUT_DIM, &d_logits[0][0], &(params->w2)[0][0], &d_h1[0][0]);
-  UnaryElemwise(BS, HIDDEN_DIM, &d_h1[0][0], OpDReLU);
+  matmul(BS, HIDDEN_DIM, OUT_DIM, &d_logits[0][0], &(params->w2)[0][0], &d_h1[0][0]);
+  unary_elemwise(BS, HIDDEN_DIM, &d_h1[0][0], op_drelu);
 
-  float X_t[IN_DIM][BS];
-  MatTranspose(BS, IN_DIM, X, &X_t[0][0]);
+  float x_t[IN_DIM][BS];
+  transpose(BS, IN_DIM, &feats[start][0], &x_t[0][0]);
   float d_w1[IN_DIM][HIDDEN_DIM];
-  MatMul(IN_DIM, HIDDEN_DIM, BS, &X_t[0][0], &d_h1[0][0], &d_w1[0][0]);
+  matmul(IN_DIM, HIDDEN_DIM, BS, &x_t[0][0], &d_h1[0][0], &d_w1[0][0]);
   float d_b1[HIDDEN_DIM] = {0.0};
   for (int i = 0; i < IN_DIM; i++) {
     for (int j = 0; j < HIDDEN_DIM; j++) {
@@ -191,7 +187,7 @@ void trainBatch(float *X, float *Y, Params *params) {
     }
   }
 
-  // gradient descent
+  /* gradient descent */
   for (int i = 0; i < IN_DIM; i++) {
     for (int j = 0; j < HIDDEN_DIM; j++) {
       params->w1[i][j] -= LR * d_w1[i][j];
@@ -210,99 +206,108 @@ void trainBatch(float *X, float *Y, Params *params) {
   }
 }
 
-void evaluate(float *X, float *Y, Params *params, int testSize) {
-  // forward
-  float a1[testSize][HIDDEN_DIM];
-  MatMul(BS, HIDDEN_DIM, IN_DIM, X, &(params->w1)[0][0], &a1[0][0]);
-  for (int i = 0; i < testSize; i++) {
+void evaluate(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], int start, int test_size) {
+  /* forward */
+  float a1[test_size][HIDDEN_DIM];
+  matmul(BS, HIDDEN_DIM, IN_DIM, &feats[start][0], &(params->w1)[0][0], &a1[0][0]);
+  for (int i = 0; i < test_size; i++) {
     for (int j = 0; j < HIDDEN_DIM; j++) {
       a1[i][j] += params->b1[j];
     }
   }
-  UnaryElemwise(testSize, HIDDEN_DIM, &a1[0][0], OpReLU);
-  float a2[testSize][OUT_DIM];
-  MatMul(testSize, OUT_DIM, HIDDEN_DIM, &a1[0][0], &(params->w2)[0][0], &a2[0][0]);
-  for (int i = 0; i < testSize; i++) {
+  unary_elemwise(test_size, HIDDEN_DIM, &a1[0][0], op_relu);
+  float a2[test_size][OUT_DIM];
+  matmul(test_size, OUT_DIM, HIDDEN_DIM, &a1[0][0], &(params->w2)[0][0], &a2[0][0]);
+  for (int i = 0; i < test_size; i++) {
     for (int j = 0; j < OUT_DIM; j++) {
       a2[i][j] += params->b2[j];
     }
   }
-  softmax(testSize, OUT_DIM, &a2[0][0]);
-  // precision
+  softmax(test_size, OUT_DIM, &a2[0][0]);
+
+  /* precision */
   int count = 0;
-  for (int i = 0; i < testSize; i++) {
-    float maxPred = -INFINITY;
-    int predLabel, trueLabel;
-    for (int j = 0; j < 3; j++) {
-      if (a2[i][j] > maxPred) {
-        maxPred = a2[i][j];
-        predLabel = j;
+  for (int i = 0; i < test_size; i++) {
+    int pred_label, true_label;
+    float max_prob = -INFINITY;
+    for (int j = 0; j < OUT_DIM; j++) {
+      if (a2[i][j] > max_prob) {
+        max_prob = a2[i][j];
+        pred_label = j;
       }
-      if (*(Y + i * 3 + j) == 1.0) {
-        trueLabel = j;
+      if (labels[start + i][j] == 1.0) {
+        true_label = j;
       }
     }
-    if (predLabel == trueLabel) {
+    if (pred_label == true_label) {
       count += 1;
     }
   }
-  float precision = count / (float)testSize;
+  float precision = count / (float)test_size;
   printf("precision: %f\n", precision);
 }
 
-int main(void) {
-  // load data
-  char line[64];
+void load_dataset(float feats[][IN_DIM], float labels[][OUT_DIM]) {
   FILE *fp = fopen("../data/iris.data", "r");
-  float feats[N_EXAMPLES][N_FEATURES];
-  float labels[N_EXAMPLES][3] = {0.0};
+  char line[64];
   int i = 0;
   while (fgets(line, 64, fp)) {
-    line[strcspn(line, "\n")] = '\0';  // get rid of the trailing \n
+    line[strcspn(line, "\n")] = '\0';    // get rid of the trailing \n
     if (strlen(line)) {
       char *dup = strdup(line);
-      ParseExample(dup, feats[i], labels[i]);
+      parse_example(dup, feats[i], labels[i]);
       free(dup);
       i++;
     }
   }
-  // shuffle
-  srand(time(NULL));  // random seed
+}
+
+void preprocess_dataset(float feats[][IN_DIM], float labels[][OUT_DIM], int train_size) {
+  /* shuffle dataset */
+  srand(time(NULL));
   for (int i = N_EXAMPLES - 1; i > 0; i--) {
-    int a = GetRandomInteger(0, i);
-    swap(feats[i], feats[a], N_FEATURES);
-    swap(labels[i], labels[a], 3);
+    int a = random_integer(0, i);
+    swap(feats[i], feats[a], IN_DIM);
+    swap(labels[i], labels[a], OUT_DIM);
   }
 
-  // normalization
-  int trainSize = (int)(N_EXAMPLES * 0.8);
-  for (int j = 0; j < N_FEATURES; j++) {
-    // calculate mean and std from the train set
+  /* normalization */
+  for (int j = 0; j < IN_DIM; j++) {
     float mean = 0.0, std = 0.0;
-    for (int i = 0; i < trainSize; i++) {
+    for (int i = 0; i < train_size; i++) {
       mean += feats[i][j];
     }
-    mean /= trainSize;
-    for (int i = 0; i < trainSize; i++) {
+    mean /= train_size;
+    for (int i = 0; i < train_size; i++) {
       std += pow(feats[i][j] - mean, 2);
     }
-    std = sqrt(std / trainSize);
-    printf("dim %d mean: %f std: %f\n", i, mean, std);
+    std = sqrt(std / train_size);
+    printf("dim %d mean: %f std: %f\n", j, mean, std);
 
     for (int i = 0; i < N_EXAMPLES; i++) {
       feats[i][j] = (feats[i][j] - mean) / std;
     }
   }
+}
 
-  Params params;
-  InitializeParams(&params);
+int main(void) {
+  /* load data */
+  int train_size = (int)(N_EXAMPLES * 0.8);
+  float feats[N_EXAMPLES][IN_DIM];
+  float labels[N_EXAMPLES][OUT_DIM] = {0.0};
+
+  load_dataset(feats, labels);
+  preprocess_dataset(feats, labels, train_size);
+
+  params_t params;
+  initialize_params(&params);
   for (int epoch = 0; epoch < N_EPOCH; epoch++) {
-    for (int step = 0; step < trainSize / BS; step++) {
-      trainBatch(&feats[step * BS][0], &labels[step * BS][0], &params);
+    for (int step = 0; step < train_size / BS; step++) {
+      train(&params, feats, labels, step * BS);
     }
     if (epoch % 100 == 0) {
       printf("epoch %d ", epoch);
-      evaluate(&feats[trainSize][0], &labels[trainSize][0], &params, N_EXAMPLES - trainSize);
+      evaluate(&params, feats, labels, train_size, N_EXAMPLES - train_size);
     }
   }
   return 0;
