@@ -8,3 +8,4 @@ __pycache__
 tools-pdf-deskew/*.pdf
 
 *.o
+*.lprof

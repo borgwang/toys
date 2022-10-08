@@ -67,12 +67,11 @@ def get_edges(arr):
             y_ = y_.astype(int)
             concentration = np.array([np.mean(arr[y_ + offset, x_]) for offset in offsets])
             variance = ((concentration[1:] - concentration[:-1]) ** 2).sum()
-            #variance = np.var(concentration)
             if variance >= best["var"]:
                 best["var"] = variance
                 best["concentration"] = concentration
                 best["y_"] = y_
-        best_offset = offsets[change_point_detection(best["concentration"])]
+        best_offset = offsets[change_dectection(best["concentration"])]
         (y1, x1), (y2, x2) = (best["y_"][0] + best_offset, x_[0]), (best["y_"][-1] + best_offset, x_[-1])
         edges[side] = np.array([x1, y1, x2, y2])
 
@@ -89,13 +88,12 @@ def get_edges(arr):
             x_ = x_.astype(int)
 
             concentration = np.array([np.mean(arr[y_, x_ + offset]) for offset in offsets])
-            #variance = ((concentration[1:] - concentration[:-1]) ** 2).sum()
             variance = np.var(concentration)
             if variance >= best["var"]:
                 best["var"] = variance
                 best["concentration"] = concentration
                 best["x_"] = x_
-        best_offset = offsets[change_point_detection(best["concentration"])]
+        best_offset = offsets[change_dectection(best["concentration"])]
         (y1, x1), (y2, x2) = (y_[0], best["x_"][0] + best_offset), (y_[-1], best["x_"][-1] + best_offset)
         edges[side] = np.array([x1, y1, x2, y2])
     return edges
@@ -116,9 +114,7 @@ def get_intersection(line1, line2):
 
 
 def transform(arr, points):
-
-    def calculate_distance(p1, p2):
-        return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
+    calculate_distance = lambda p1, p2: ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
 
     oh, ow = arr.shape
     h1 = calculate_distance(points["tl"], points["bl"])
@@ -136,13 +132,12 @@ def transform(arr, points):
     pad_h, pad_w = (oh - th) // 2, (ow - tw) // 2
     return np.pad(newarr, ((pad_h, oh - th - pad_h), (pad_w, ow - tw - pad_w)), constant_values=255)
 
-
-def change_point_detection(points, step=1):
+def change_dectection(points, step=1):
     points = np.array(points)[:, np.newaxis]
     xs = np.arange(len(points))[:, np.newaxis]
     best_err, best_sep = float("inf"), None
+    model1 = LinearRegression()
     for sep in range(step, len(points), step):
-        model1 = LinearRegression()
         model1.fit(xs[:sep], points[:sep])
         err1 = (np.abs(model1.predict(xs[:sep]) - points[:sep]) ** 0.1).sum()
         model1.fit(xs[sep:], points[sep:])
@@ -153,17 +148,15 @@ def change_point_detection(points, step=1):
             best_sep = sep
     return best_sep - step
 
-
 def main():
-    curr_dir = os.path.dirname(os.path.abspath(__file__))
-    input_path = os.path.join(curr_dir, args.input)
-    output_path = os.path.join(curr_dir, args.output)
-
+    assert os.path.exists(args.input)
     last_page = None if args.n_pages is None else args.first_page + args.n_pages - 1
-    imgs = convert_from_path(input_path, thread_count=10, first_page=args.first_page,
+    st = time.monotonic()
+    imgs = convert_from_path(args.input, thread_count=10, first_page=args.first_page,
                              last_page=last_page, grayscale=True, dpi=DPI)
-    arrs = [np.array(img) for img in imgs]
+    print(f"[INFO] convert to images done. time cost: {time.monotonic() - st:.4f}s")
     print(f"[INFO] {len(imgs)} pages in total. start from page {args.first_page}")
+    arrs = [np.array(img) for img in imgs]
     print(f"[INFO] page size: {arrs[0].shape}")
 
     st = time.monotonic()
@@ -177,15 +170,14 @@ def main():
     print(f"[INFO] time cost: {time.monotonic() - st:.4f}s")
 
     newimgs = [Image.fromarray(arr) for arr in newarrs]
-    newimgs[0].save(output_path, save_all=True, append_images=newimgs[1:])
-    print(f"[INFO] save to {output_path}")
+    newimgs[0].save(args.output, save_all=True, append_images=newimgs[1:])
+    print(f"[INFO] save to {args.output}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, default="./test.pdf")
-    parser.add_argument("--output", type=str, default="./out.pdf")
+    parser.add_argument("--input", type=str, required=True)
+    parser.add_argument("--output", type=str, required=True)
     parser.add_argument("--first_page", type=int, default=1)
     parser.add_argument("--n_pages", type=int, default=None)
     args = parser.parse_args()
     main()
-
