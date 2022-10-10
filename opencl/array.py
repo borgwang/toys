@@ -28,7 +28,8 @@ class ClArray:
         return len(self.shape)
 
     def numpy(self):
-        arr = elemwise_op(ElemwiseOps.NOOP, A=self) if not self.c_contiguous else self
+        from ops import elemwise_op
+        arr = elemwise_op("A", A=self)
         data = np.empty(arr.shape, dtype=arr.dtype)
         cl.enqueue("copy", data, arr.buffer, is_blocking=True)
         return data
