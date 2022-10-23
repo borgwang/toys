@@ -57,7 +57,7 @@ def get_edges(arr):
     for side in ("top", "bottom"):
         best = defaultdict(int)
         x_ = np.arange(w).astype(int)
-        offsets = np.arange(h // 4) if side == "top" else np.arange(-1, -h // 4, -1)
+        offsets = np.arange(h // 6) if side == "top" else np.arange(-1, -h // 6, -1)
         for degree in np.arange(DEGREE_LB, DEGREE_UB, DEGREE_STEP):
             tan = np.tan(np.abs(degree) / 180 * np.pi)
             if side == "top":
@@ -78,7 +78,7 @@ def get_edges(arr):
     for side in ("left", "right"):
         best = defaultdict(int)
         y_ = np.arange(h).astype(int)
-        offsets = np.arange(w // 3) if side == "left" else np.arange(-1, -w // 3, -1)
+        offsets = np.arange(w // 4) if side == "left" else np.arange(-1, -w // 4, -1)
         for degree in np.arange(DEGREE_LB, DEGREE_UB, DEGREE_STEP):
             tan = np.tan(np.abs(degree) / 180 * np.pi)
             if side == "left":

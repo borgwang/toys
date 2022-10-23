@@ -40,7 +40,7 @@ print(res.numpy())
 np.random.seed(0)
 shape = (10000, 10000)
 np_A = np.random.uniform(0, 1, shape).astype(np.float32)
-np_B = np.ones((1, 1)).astype(np.float32) * 2
+np_B = np.ones((1, 1)).astype(np.float32) * 9.999999747378752e-05
 A = ClArray(np_A)
 B = ClArray(np_B)
 B = B.expand(shape)
@@ -53,7 +53,9 @@ print(res.sum())
 
 # way faster
 st = time.monotonic()
-res2 = elemwise_op("A*2", A=A)
+#res2 = elemwise_op("A*9.999999747378752e-05f", A=A)
+res2 = elemwise_op("pow(A, 2.0f)", A=A)
 print(time.monotonic() - st)
 res2 = res2.numpy()
 print(res2.sum())
+

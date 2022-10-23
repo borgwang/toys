@@ -1,18 +1,31 @@
 import os
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
+os.environ['OMP_NUM_THREADS'] = '1'
+import time
 import numpy as np
 
-import time
+DEBUG = 0
 
-N = 2048
-A = np.random.randn(N, N).astype(np.float32)
-B = np.random.randn(N, N).astype(np.float32)
+if DEBUG:
+    N = 4
+else:
+    N = 512
 
-flop = N*N*2*N
-for _ in range(4):
-    st = time.monotonic()
-    C = A @ B
-    et = time.monotonic()
-    print(f"{(flop/1e9)/(et-st):3f} GFLOPs")
+def main():
+    A = np.random.normal(0, 1, (N, N)).astype(np.float32)
+    B = np.random.normal(0, 1, (N, N)).astype(np.float32)
+    flop = 2 * N * N * N
+    for i in range(100):
+        st = time.monotonic()
+        #C = A @ B.T
+        C = A @ B
+        et = time.monotonic()
+        s = et - st
+        print(f"{flop/s * 1e-9:.2f} GFLOP/S, {s*1e3:.2f} ms")
 
+    with open("/tmp/matmul", "wb") as f:
+        f.write(A.data)
+        f.write(B.data)
+        f.write(C.data)
+
+if __name__ == "__main__":
+    main()
