@@ -31,6 +31,7 @@ def plot_samples(samples, path):
 
 
 def statistical_ml(dataset):
+    """classic ML algorithms"""
 
     def fit_and_evaluate(model):
         train_x, train_y, test_x, test_y = dataset
@@ -227,8 +228,7 @@ def main():
     # siamese_net(dataset)
 
 
-if __name__ == '__main__':
-    global args
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=31)
     parser.add_argument("--lr", type=float, default=3e-3)
