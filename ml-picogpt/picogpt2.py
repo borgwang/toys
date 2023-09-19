@@ -9,7 +9,7 @@ Load weights of gpt2-* and sample text using numpy.
   `pip3 install numpy torch transformers`
 
 - run
-  `python3 picogpt2.py --model-type gpt2 --start "Hi," --temperature 0.8`
+  `python3 picogpt2.py --model gpt2 --start "Hi," --temperature 0.8 --topk 40`
 """
 import argparse
 
@@ -22,6 +22,7 @@ parser.add_argument("--model", default="gpt2", type=str,
                     choices=("gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"))
 parser.add_argument("--max-new-tokens", default=100, type=int)
 parser.add_argument("--temperature", default=1.0, type=float)
+parser.add_argument("--topk", default=-1, type=int)
 args = parser.parse_args()
 
 # hparams
@@ -88,7 +89,10 @@ def gpt2(ids):
   x = layer_norm(x, w, b)
   if args.temperature == 0:
     return np.argmax(x[-1, :] @ wte.T)
-  probs = softmax(x[-1, :] @ wte.T / args.temperature)
+  logits = x[-1, :] @ wte.T / args.temperature
+  if args.topk > 1:
+    logits[np.argsort(logits)[:-args.topk]] = -float("inf")
+  probs = softmax(logits)
   return np.random.choice(range(len(probs)), p=probs)
 
 def sample():
