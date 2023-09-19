@@ -87,13 +87,13 @@ def gpt2(ids):
     x = transformer_block(x, i)
   w, b = ws["ln_f.weight"], ws["ln_f.bias"]
   x = layer_norm(x, w, b)
+  logits = x[-1, :] @ wte.T
   if args.temperature == 0:
-    return np.argmax(x[-1, :] @ wte.T)
-  logits = x[-1, :] @ wte.T / args.temperature
+    return np.argmax(logits)
+  logits /= args.temperature
   if args.topk > 1:
     logits[np.argsort(logits)[:-args.topk]] = -float("inf")
-  probs = softmax(logits)
-  return np.random.choice(range(len(probs)), p=probs)
+  return np.random.choice(range(len(logits)), p=softmax(probs))
 
 def sample():
   tokenizer = GPT2Tokenizer.from_pretrained(args.model)
