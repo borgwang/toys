@@ -21,8 +21,9 @@
 
 - Google 在 2018 年的这篇文章 [Blockwise Parallel Decoding for Deep Autoregressive Models](https://proceedings.neurips.cc/paper/2018/file/c4127b9194fe8562c64dc0f5bf2c93bc-Paper.pdf) 里就提出了类似的思路，不过不是用一个独立的 draft model 来生成 candidate tokens，而是直接在主网络建模预估后一个 token，后两个 token，...，因此推理时 forward 可以并行得到一系列 token，然后进行校验。不过仅支持了 greedy sampling。[Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/pdf/2211.17192.pdf) 这边文章是独立于 DeepMind 的工作，基本思路一致。
 
-- 
 
 ### resources
 - [Blog Post by mlsys.ai](https://www.mlsys.ai/papers/speculative_decoding.html)
 - [Blog Post by HuggingFace](https://huggingface.co/blog/assisted-generation)
+- [tweet by Karpathy](https://twitter.com/karpathy/status/1697318534555336961)
+- [github repo - jaymody](https://github.com/jaymody/speculative-sampling)
