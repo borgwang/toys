@@ -1,5 +1,5 @@
 """
-Load weights of gpt2-* and sample text using numpy.
+Load weights of gpt2-* and sample text using numpy (float32).
 
 - refs
   - https://github.com/jaymody/picoGPT
@@ -33,7 +33,7 @@ hparams = {
   "gpt2-xl": dict(n_layer=48, n_head=25, n_embed=1600)
 }[args.model]
 hparams.update(vocab_size=50257, context_len=1024)
-# gpt2 parameters from 🤗
+# parameters
 ws = {k: v.numpy() for k, v in GPT2Model.from_pretrained(args.model).state_dict().items()}
 
 def layer_norm(x, w, b, eps=1e-5):
@@ -93,7 +93,7 @@ def gpt2(ids):
   logits /= args.temperature
   if args.topk > 1:
     logits[np.argsort(logits)[:-args.topk]] = -float("inf")
-  return np.random.choice(range(len(logits)), p=softmax(probs))
+  return np.random.choice(range(len(logits)), p=softmax(logits))
 
 def sample():
   tokenizer = GPT2Tokenizer.from_pretrained(args.model)
