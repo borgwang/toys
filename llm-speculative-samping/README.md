@@ -3,9 +3,7 @@
 实现了 DeepMind 在 [Accelerating Large Language Model Decoding with Speculative Sampling](https://arxiv.org/pdf/2302.01318.pdf) 提出大模型推理加速方法 Speculative Sampling。
 
 
-- autoregressive 类的生成模型在推理时新 token 的生成依赖于前面的 token，因此必须一个一个 token 生成，一次模型 forawrd pass 只能生成一个 token。每次 forward pass 需要将整个模型参数从内存都到芯片，但是计算一个 query，且序列长度通常不长，因此瓶颈不在计算，而在于内存带宽。[这条推特](https://twitter.com/karpathy/status/1691571869051445433) 有针对这点进行了分析
-
-- Speculative Sampling 核心思想是用一个更小但更快的 draft model 生成一个 draft token 序列，然后将原始输入序列拼上 draft 序列一起送入目标模型进行推理，得到目标模型在这些 draft token 上的概率分布，进而可以对 draft token 逐一进行检验，如果draft token 猜对了，就可以直接跳到下个 token，如果猜错了，那么后续的 draft token 就丢掉，从当前位置开始重新一轮的 sampling
+- autoregressive 类的生成模型在推理时新 token 的生成依赖于前面的 token，因此必须一个一个 token 生成，一次模型 forawrd pass 只能生成一个 token。Speculative Sampling 核心思想是用一个更小但更快的 draft model 生成一个 draft token 序列，然后将原始输入序列拼上 draft 序列一起送入目标模型进行推理，得到目标模型在这些 draft token 上的概率分布，进而可以对 draft token 逐一进行检验，如果draft token 猜对了，就可以直接跳到下个 token，如果猜错了，那么后续的 draft token 就丢掉，从当前位置开始重新一轮的 sampling
 
 - 对比 autoregressive 从做到右一个一个生成的方式和 speculative sampling
   - autoregressive sampling 每一轮生成一个 token，计算代价是一次目标模型 forward pass
@@ -19,8 +17,9 @@
 
   ![sampling-scheme](sampling-scheme.png)
 
-- Google 在 2018 年的这篇文章 [Blockwise Parallel Decoding for Deep Autoregressive Models](https://proceedings.neurips.cc/paper/2018/file/c4127b9194fe8562c64dc0f5bf2c93bc-Paper.pdf) 里就提出了类似的思路，不过不是用一个独立的 draft model 来生成 candidate tokens，而是直接在主网络建模预估后一个 token，后两个 token，...，因此推理时 forward 可以并行得到一系列 token，然后进行校验。不过仅支持了 greedy sampling。[Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/pdf/2211.17192.pdf) 这边文章是独立于 DeepMind 的工作，基本思路一致。
+- naive 拒绝采样方法就是先从 B 采样得到数据点 x，然后分别计算 `p(x|A)` 和 `p(x|B)，对 p(x|B)` 进行缩放使其在定义域上所有分布 B 的值都大于分布 A 的值（B 的 PDF 整个罩住了 A 的 PDF），假设这个缩放系数是 C，此时 C*p(x|B) 一定是大于等于 p(x|A) 的，此时接受 x 的概率为 `p(x|A) / (C*p(x|B))`。如果拒绝这个采样则重新回到上面的步骤，对 B 进行采样，然后判断。Speculative Sampling 中对拒绝采样做了一些修改，主要是为了支持 greedy sampling。在 greedy sampling 情况下，target model 和 draft model 的概率分布是一个 one-hot 的概率分布，因此无法按照原始的拒绝采样将 draft model 的分布进行 scale 使其能够 cover 住 target model 的概率分布。
 
+- Google 在 2018 年的这篇文章 [Blockwise Parallel Decoding for Deep Autoregressive Models](https://proceedings.neurips.cc/paper/2018/file/c4127b9194fe8562c64dc0f5bf2c93bc-Paper.pdf) 里就提出了类似的思路，不过不是用一个独立的 draft model 来生成 candidate tokens，而是直接在主网络建模预估后一个 token，后两个 token，...，因此推理时 forward 可以并行得到一系列 token，然后进行校验。不过仅支持了 greedy sampling。[Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/pdf/2211.17192.pdf) 这边文章是独立于 DeepMind 的工作，基本思路一致。
 
 ### resources
 - [Blog Post by mlsys.ai](https://www.mlsys.ai/papers/speculative_decoding.html)
