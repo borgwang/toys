@@ -2,7 +2,6 @@
 
 实现了 DeepMind 在 [Accelerating Large Language Model Decoding with Speculative Sampling](https://arxiv.org/pdf/2302.01318.pdf) 提出大模型推理加速方法 Speculative Sampling。
 
-
 - autoregressive 类的生成模型在推理时新 token 的生成依赖于前面的 token，因此必须一个一个 token 生成，一次模型 forawrd pass 只能生成一个 token。Speculative Sampling 核心思想是用一个更小但更快的 draft model 生成一个 draft token 序列，然后将原始输入序列拼上 draft 序列一起送入目标模型进行推理，得到目标模型在这些 draft token 上的概率分布，进而可以对 draft token 逐一进行检验，如果draft token 猜对了，就可以直接跳到下个 token，如果猜错了，那么后续的 draft token 就丢掉，从当前位置开始重新一轮的 sampling
 
 - 对比 autoregressive 从做到右一个一个生成的方式和 speculative sampling
