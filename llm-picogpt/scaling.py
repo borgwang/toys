@@ -33,9 +33,9 @@ def get_model_parameters(hp):
 
 def get_model_flops(hp):
   """
-  for metric multiplication A @ B = C, A: (B,M,K), B: (B,K,N), C: (B,M,N)
+  for matrix multiplication A @ B = C, A: (B,M,K), B: (B,K,N), C: (B,M,N)
   the total FLOPs in a forward pass is B*(2*K*M*N) = 2BKMN
-  in backward pass, we have to calculate
+  in backward pass, we need to calculate 2 derivatives
     - dy/dA = dy/dC @ B.T, (B,M,N) @ (B,N,K), that is B*(2*N*M*K) FLOPs
     - dy/dB = A @ (dy/dC).T, (B,K,N) @ (B,N,M), that is also B*(2*N*M*K) FLOPs
   there are 4BKMN FLOPs in a backward pass
@@ -99,7 +99,17 @@ print("--- FLOPs ---")
 for name, hparams in model_hparams.items():
   flops = get_model_flops(hparams)
   n_params = get_model_parameters(hparams)
+
+  # for a modren transformer model,
+  # most of parameters are weights used for matrix multiplication
+  # and most of the FLOPs comes from matrix multiplication
+  #
+  # one can approximate the number of FLOPs by caculating FLOPs of
+  # a single metirx multiplication, specifically (N,M) @ (M,K)
+  # N is the total number of tokens, M is the embedding size, (M,K) is the shape of our large weight metrix
+  # the approximate FLOPs is 6*N*M*K -> 6 * num_tokens * num_parameters
   approx_flops = 6 * n_params * hparams["context_len"]
+
   print(f"[{name}] flops: {flops/1e9:.2f} GFLOPs")
   print(f"[{name}] approx_flops: {approx_flops//1e9:.2f} GFLOPs")
 
