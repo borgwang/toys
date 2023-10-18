@@ -1,10 +1,9 @@
-import numpy as np
 import time
-
 from array import ClArray
-from ops import elemwise_op, reduce_op, matmul_op
 
-"""
+import numpy as np
+from ops import elemwise_op, matmul_op, reduce_op
+
 A = ClArray(np.ones((2, 3)))
 B = ClArray(np.ones((2, 3)))
 
@@ -23,7 +22,6 @@ print(res.numpy())
 # reduce op
 res = reduce_op("sum", A=A)
 print(res.numpy())
-
 res = reduce_op("sum", axis=1, keepdims=True, A=A)
 print(res.numpy())
 
@@ -35,8 +33,8 @@ print(np_A @ np_B)
 A, B = ClArray(np_A), ClArray(np_B)
 res = matmul_op(A=A, B=B)
 print(res.numpy())
-"""
 
+# broadcasting
 np.random.seed(0)
 shape = (10000, 10000)
 np_A = np.random.uniform(0, 1, shape).astype(np.float32)
@@ -50,12 +48,3 @@ res = elemwise_op("A*B", A=A, B=B)
 print(time.monotonic() - st)
 res = res.numpy()
 print(res.sum())
-
-# way faster
-st = time.monotonic()
-#res2 = elemwise_op("A*9.999999747378752e-05f", A=A)
-res2 = elemwise_op("pow(A, 2.0f)", A=A)
-print(time.monotonic() - st)
-res2 = res2.numpy()
-print(res2.sum())
-

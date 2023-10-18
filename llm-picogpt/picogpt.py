@@ -105,4 +105,6 @@ def sample():
     print("-"*30)
     print(tokenizer.decode(ids))
 
-sample()
+
+if __name__ == "__main__":
+  sample()

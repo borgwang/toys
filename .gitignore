@@ -9,3 +9,5 @@ tools-pdf-deskew/*.pdf
 
 *.o
 *.lprof
+
+.mypy_cache

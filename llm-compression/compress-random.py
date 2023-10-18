@@ -1,5 +1,4 @@
 import os
-import random
 import string
 import subprocess
 import tempfile
@@ -15,7 +14,7 @@ def compare(data, probs):
     out = os.path.join(tmpdir, "random.zst")
     with open(inp, "w") as f:
       f.write(data)
-    subprocess.run(f"zstd -fq {inp} -o {out}", shell=True)
+    subprocess.run(f"zstd -fq {inp} -o {out}", shell=True, check=True)
     original_size = os.path.getsize(inp)
     zst_size = os.path.getsize(out)
 
@@ -24,8 +23,8 @@ def compare(data, probs):
   theoretical_size /= 8  # bits to bytes
 
   print(f"original_size: {original_size:,} B")
-  print(f"zst_size: {zst_size:,} B")
-  print(f"theoretical: {int(theoretical_size):,} B")
+  print(f"zst_size: {zst_size:,} B ({100*zst_size/original_size:.2f}%)")
+  print(f"theoretical: {int(theoretical_size):,} B ({100*theoretical_size/original_size:.2f}%)")
 
 def compare_from_data(data):
   probs = [data.count(v) for v in vocab]
@@ -36,24 +35,22 @@ def compare_from_probs(probs):
   data = "".join(np.random.choice(vocab, N, p=probs))
   compare(data, probs)
 
-# compression ratio is ~0.64 for random string of vocabulary with 36 characters
-print("uniform distribution")
-probs = [1] * len(vocab)
-probs = [p/sum(probs) for p in probs]
-compare_from_probs(probs)
-print("----")
 
-# can compress more efficiently if the character distribution is non-uniform
-print("one-hot (nearly) distribution")
-probs = [1] * len(vocab)
-probs[0] *= 10000
-probs = [p/sum(probs) for p in probs]
-compare_from_probs(probs)
+if __name__ == "__main__":
+  # compression ratio is ~0.64 for random string from a 36 characters vocabulary
+  print("--- uniform distribution random characters ---")
+  probs = [1] * len(vocab)
+  probs = [p/sum(probs) for p in probs]
+  compare_from_probs(probs)
 
-# we can surpass the shannon entropy if characters are not i.i.d.
-print("---iid---")
-raw_data = np.random.choice(vocab, N)
-compare_from_data("".join(raw_data))
-print("---non-iid---")
-compare_from_data("".join(sorted(raw_data)))
+  # can compress more efficiently if the character distribution is non-uniform
+  print("--- (nearly) one-hot distribution ---")
+  probs = [1] * len(vocab)
+  probs[0] *= 10000
+  probs = [p/sum(probs) for p in probs]
+  compare_from_probs(probs)
 
+  # we can surpass the shannon entropy if the characters are not i.i.d.
+  print("--- non-iid ---")
+  raw_data = np.random.choice(vocab, N)
+  compare_from_data("".join(sorted(raw_data)))

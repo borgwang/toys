@@ -1,5 +1,3 @@
-from transformers import GPT2Model
-
 model_hparams = {
   "gpt2":        dict(n_layer=12, n_head=12, n_embed=768, vocab_size=50257, context_len=1024),
   #"gpt2-medium": dict(n_layer=24, n_head=16, n_embed=1024, vocab_size=50257, context_len=1024),
@@ -46,8 +44,6 @@ def get_model_flops(hp):
   V = hp["vocab_size"]
   E = hp["n_embed"]
 
-  flops = 0
-
   # --- embedding ---
   # input -> (B, T)
   # wte: (V, E), wpe: (C, E)
@@ -83,33 +79,35 @@ def get_model_flops(hp):
   backward = 2 * forward  # as in Kaplan et al. 2020
   return forward + backward
 
-print("--- parameters ---")
-for name, hparams in model_hparams.items():
-  n_params = get_model_parameters(hparams)
-  print(f"[{name}]#params: {n_params:,}")
 
-  # verify our calculation with pytorch model checkpoint
-  #model = GPT2Model.from_pretrained(name)
-  #n_params_pt = sum(p.numel() for p in model.parameters() if p.requires_grad)
-  #assert n_params == n_params_pt
-  #print(f"[{name}]#params_from_pytorch: {n_params_pt:,}")
+if __name__ == "__main__":
+  print("--- parameters ---")
+  for name, hparams in model_hparams.items():
+    n_params = get_model_parameters(hparams)
+    print(f"[{name}]#params: {n_params:,}")
+
+    # verify our calculation with pytorch model checkpoint
+    #from transformers import GPT2Model
+    #model = GPT2Model.from_pretrained(name)
+    #n_params_pt = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    #assert n_params == n_params_pt
+    #print(f"[{name}]#params_from_pytorch: {n_params_pt:,}")
 
 
-print("--- FLOPs ---")
-for name, hparams in model_hparams.items():
-  flops = get_model_flops(hparams)
-  n_params = get_model_parameters(hparams)
+  print("--- FLOPs ---")
+  for name, hparams in model_hparams.items():
+    flops = get_model_flops(hparams)
+    n_params = get_model_parameters(hparams)
 
-  # for a modren transformer model,
-  # most of parameters are weights used for matrix multiplication
-  # and most of the FLOPs comes from matrix multiplication
-  #
-  # one can approximate the number of FLOPs by caculating FLOPs of
-  # a single metirx multiplication, specifically (N,M) @ (M,K)
-  # N is the total number of tokens, M is the embedding size, (M,K) is the shape of our large weight metrix
-  # the approximate FLOPs is 6*N*M*K -> 6 * num_tokens * num_parameters
-  approx_flops = 6 * n_params * hparams["context_len"]
+    # for a modren transformer model,
+    # most of parameters are weights used for matrix multiplication
+    # and most of the FLOPs comes from matrix multiplication
+    #
+    # one can approximate the number of FLOPs by caculating FLOPs of
+    # a single metirx multiplication, specifically (N,M) @ (M,K)
+    # N is the total number of tokens, M is the embedding size, (M,K) is the shape of our large weight metrix
+    # the approximate FLOPs is 6*N*M*K -> 6 * num_tokens * num_parameters
+    approx_flops = 6 * n_params * hparams["context_len"]
 
-  print(f"[{name}] flops: {flops/1e9:.2f} GFLOPs")
-  print(f"[{name}] approx_flops: {approx_flops//1e9:.2f} GFLOPs")
-
+    print(f"[{name}] flops: {flops/1e9:.2f} GFLOPs")
+    print(f"[{name}] approx_flops: {approx_flops//1e9:.2f} GFLOPs")

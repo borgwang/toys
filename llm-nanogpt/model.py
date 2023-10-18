@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
+from packaging import version
 from torch.nn import functional as F
 
-from utils import is_pytorch2
+is_pytorch2 = version.parse(torch.__version__) >= version.parse("2.0.0")
 
 class LayerNorm(nn.Module):
   def __init__(self, ndim, bias):
@@ -22,7 +23,7 @@ class CausalSelfAttention(nn.Module):
     self.resid_dropout = nn.Dropout(cfg.dropout)
     self.n_head, self.n_embed, self.dropout = cfg.n_head, cfg.n_embed, cfg.dropout
 
-    if not is_pytorch2():
+    if not is_pytorch2:
       self.register_buffer("bias", torch.tril(torch.ones(cfg.context_len, cfg.context_len)).view(1, 1, cfg.context_len, cfg.context_len))
 
   def forward(self, x):
@@ -34,7 +35,7 @@ class CausalSelfAttention(nn.Module):
     k = k.view(B, T, self.n_head, hs).transpose(1, 2)
     v = v.view(B, T, self.n_head, hs).transpose(1, 2)
 
-    if is_pytorch2():
+    if is_pytorch2:
       y = F.scaled_dot_product_attention(q, k, v, dropout_p=self.dropout if self.training else 0, is_causal=True)
     else:
       # (B, nhead, T, T)
@@ -143,7 +144,7 @@ class GPT(nn.Module):
 
   def forward(self, x, y=None):
     device = x.device
-    b, t = x.size()
+    _, t = x.size()
     assert t <= self.cfg.context_len, f"cannot forward sequence of length {t}, block size is only {self.cfg.context_len}"
 
     pos = torch.arange(0, t, dtype=torch.long, device=device)
@@ -209,4 +210,3 @@ class GPT(nn.Module):
         with torch.no_grad():
           sd[k].copy_(sd_hf[k])
     return model
-

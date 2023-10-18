@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 
+
 def from_image(infilename):
   img = Image.open(infilename)
   img.load()
@@ -33,7 +34,7 @@ def conv1(kernel, inputs, stride=1, mode="SAME"):
   pad = get_padding(inputs, ks, mode=mode)
   padded_inputs = np.pad(inputs, pad_width=((pad[0], pad[2]), (pad[1], pad[3]), (0, 0)), mode="constant")
 
-  height, width, channels = inputs.shape
+  height, width, _ = inputs.shape
   out_width = int((width + pad[0] + pad[2] - ks[0]) / stride + 1)
   out_height = int((height + pad[1] + pad[3] - ks[1]) / stride + 1)
 
@@ -55,7 +56,7 @@ def conv2(kernel, inputs, stride=1, mode="SAME"):
   pad = get_padding(inputs, ks, mode=mode)
   padded_inputs = np.pad(inputs, pad_width=((pad[0], pad[2]), (pad[1], pad[3]), (0, 0)), mode="constant")
 
-  height, width, channels = inputs.shape
+  height, width, _ = inputs.shape
   out_width = int((width + pad[0] + pad[2] - ks[0]) / stride + 1)
   out_height = int((height + pad[1] + pad[3] - ks[1]) / stride + 1)
 
@@ -83,6 +84,7 @@ def test():
 
   np.testing.assert_allclose(result1, result2)
   print("两种方式结果相等")
+
 
 if __name__ == "__main__":
   test()

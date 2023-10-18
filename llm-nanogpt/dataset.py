@@ -1,8 +1,8 @@
 import os
 import pickle
-import requests
 
 import numpy as np
+import requests
 import tiktoken
 import torch
 from tqdm import tqdm
@@ -41,11 +41,11 @@ class Dataset:
     y = torch.stack([torch.from_numpy((data[i+1: i+1+context_len]).astype(np.int64)) for i in ix])
     device = self.cfg.run.device
     if "cuda" in device:
-        # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
-        x = x.pin_memory().to(device, non_blocking=True)
-        y = y.pin_memory().to(device, non_blocking=True)
+      # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
+      x = x.pin_memory().to(device, non_blocking=True)
+      y = y.pin_memory().to(device, non_blocking=True)
     else:
-        x, y = x.to(device), y.to(device)
+      x, y = x.to(device), y.to(device)
     return x, y
 
   @property
@@ -67,7 +67,7 @@ class ShakespeareDataset(Dataset):
 
     if not os.path.exists(input_file_path):
       with open(input_file_path, "w") as f:
-        f.write(requests.get(self.url).text)
+        f.write(requests.get(self.url, timeout=10).text)
 
     with open(input_file_path, "r") as f:
       data = f.read()
@@ -144,7 +144,7 @@ class OpenwebtextDataset(Dataset):
         batch = dset.shard(num_shards=total_batches, index=batch_idx, contiguous=True).with_format("numpy")
         arr_batch = np.concatenate(batch["ids"])
         ## Write into mmap
-        arr[idx : idx + len(arr_batch)] = arr_batch
+        arr[idx: idx + len(arr_batch)] = arr_batch
         idx += len(arr_batch)
       arr.flush()
 
@@ -160,4 +160,3 @@ Datasets = {
     "shakespeare": ShakespeareDataset,
     "openwebtext": OpenwebtextDataset
 }
-

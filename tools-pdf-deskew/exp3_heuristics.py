@@ -6,11 +6,10 @@ from collections import defaultdict
 
 import cv2
 import numpy as np
+from evaluate import evaluate
 from pdf2image import convert_from_path
 from PIL import Image, ImageDraw
 from sklearn.linear_model import LinearRegression
-
-from evaluate import evaluate
 
 SCALE_FACTOR = 4
 
@@ -22,8 +21,8 @@ DETECT_PART_TOP_BOTTOM = 1/3
 DETECT_PART_LEFT_RIGHT = 1/3
 
 DPI = 400
-PLOT = int(os.getenv("PLOT", 0))
-WORKERS = int(os.getenv("WORKERS", 8))
+PLOT = int(os.getenv("PLOT", "0"))
+WORKERS = int(os.getenv("WORKERS", "8"))
 
 def process(arr):
   # step1: get edges and corner points
@@ -46,10 +45,10 @@ def process(arr):
     img = Image.fromarray(arr)
     draw = ImageDraw.Draw(img)
     for edge in edges.values():
-        draw.line(tuple(edge), fill="black", width=2)
+      draw.line(tuple(edge), fill="black", width=2)
     r = 4
     for w, h in points.values():
-        draw.ellipse((w - r, h - r, w + r, h + r), fill="black")
+      draw.ellipse((w - r, h - r, w + r, h + r), fill="black")
     img.show()
     Image.fromarray(newarr).show()
   return newarr
@@ -116,9 +115,10 @@ def get_intersection(line1, line2):
   y = k_1 * x + b_1
   return np.array([x, y])
 
-
 def transform(arr, points):
-  calculate_distance = lambda p1, p2: ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
+
+  def calculate_distance(p1, p2):
+    return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
 
   oh, ow = arr.shape
   h1 = calculate_distance(points["tl"], points["bl"])
@@ -176,6 +176,7 @@ def main():
   newimgs = [Image.fromarray(arr) for arr in newarrs]
   newimgs[0].save(args.output, save_all=True, append_images=newimgs[1:])
   print(f"[INFO] save to {args.output}")
+
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()

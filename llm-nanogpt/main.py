@@ -1,19 +1,20 @@
 import argparse
 import dataclasses
-import os
 import importlib
+import os
 import pickle
+import sys
 import time
 from contextlib import nullcontext
 
-import torch
 import tiktoken
-
+import torch
 from dataset import Datasets
 from lr import LRCosineAnnealing
 from model import GPT
-from utils import is_support_compile
+from packaging import version
 
+is_support_compile = version.parse(torch.__version__) >= version.parse("2.0.0") and sys.version_info < (3, 11)
 
 def setup_torch(seed=31):
   torch.manual_seed(seed)
@@ -88,7 +89,7 @@ def train():
       for k in range(cfg_train.eval_iters):
         X, Y = dataset.get_batch(split)
         with ctx:
-          logits, loss = model(X, Y)
+          _, loss = model(X, Y)
         losses[k] = loss.item()
       out[split] = losses.mean()
     model.train()
@@ -123,9 +124,9 @@ def train():
         print(f"saving checkpoint to {ckpt_dir}")
         torch.save(checkpoint, os.path.join(ckpt_dir, "ckpt.pt"))
 
-    for micro_step in range(cfg_train.gradient_accumulation_steps):
+    for _ in range(cfg_train.gradient_accumulation_steps):
       with ctx:
-        logits, loss = model(X, Y)
+        _, loss = model(X, Y)
         loss /= cfg_train.gradient_accumulation_steps
       # immediately async prefetch next batch while model is doing the forward pass
       X, Y = dataset.get_batch("train")
@@ -183,8 +184,12 @@ def sample():
   else:
     # assume gpt2 encodings by default
     enc = tiktoken.get_encoding("gpt2")
-    encode = lambda tokens: enc.encode(tokens, allowed_special={"<|endoftext|>"})
-    decode = lambda ids: enc.decode(ids)
+
+    def encode(tokens):
+      return enc.encode(tokens, allowed_special={"<|endoftext|>"})
+
+    def decode(ids):
+      return enc.decode(ids)
 
   # sample!
   start_ids = encode(cfg_sample.start)
