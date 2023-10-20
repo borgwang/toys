@@ -1,1 +1,4 @@
 line-length = 100
+extend-ignore = [
+ "E741",  # Ambiguous variable name
+]

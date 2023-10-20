@@ -39,13 +39,12 @@ def compare_from_probs(probs):
 if __name__ == "__main__":
   # compression ratio is ~0.64 for random string from a 36 characters vocabulary
   print("--- uniform distribution random characters ---")
-  probs = [1] * len(vocab)
-  probs = [p/sum(probs) for p in probs]
+  probs = [1/len(vocab)] * len(vocab)
   compare_from_probs(probs)
 
   # can compress more efficiently if the character distribution is non-uniform
   print("--- (nearly) one-hot distribution ---")
-  probs = [1] * len(vocab)
+  probs = [1.0] * len(vocab)
   probs[0] *= 10000
   probs = [p/sum(probs) for p in probs]
   compare_from_probs(probs)

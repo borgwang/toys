@@ -11,3 +11,7 @@ tools-pdf-deskew/*.pdf
 *.lprof
 
 .mypy_cache
+.ruff_cache
+.vscode
+
+algorithm-data-compression/data
