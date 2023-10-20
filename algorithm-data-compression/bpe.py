@@ -18,7 +18,7 @@ def decode_dict(d):
   return dict(json.loads(d))
 
 def encode(data:bytes, fast:bool=True) -> bytes:
-  table = {i: (i, -2) for i in range(256)}
+  table = {i: (i, -2) for i in range(2**8)}
   for i in set(data):
     table[i] = (i, -1)
 
@@ -41,7 +41,7 @@ def encode(data:bytes, fast:bool=True) -> bytes:
 
     # replace the byte-pair to the unused byte
     table[unused] = bp
-    replaced = data.replace(bytes(bp), unused.to_bytes())
+    replaced = data.replace(bytes(bp), bytes([unused]))
 
     # update bp_cnt
     if fast:
@@ -89,6 +89,8 @@ def decode(data:bytes) -> bytes:
 
 
 if __name__ == "__main__":
+  # BPE compression works better for data tend to have many unused byte values, e.g. text data
+  # we use the validation set of the [TinyStoriesV2](https://huggingface.co/datasets/roneneldan/TinyStories) dataset
   with open("./data/TinyStoriesV2-GPT4-valid.txt", "rb") as f:
     inputs = f.read()
 
