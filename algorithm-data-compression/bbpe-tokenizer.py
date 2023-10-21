@@ -1,9 +1,4 @@
-"""
-Reference: https://github.com/openai/tiktoken/blob/main/tiktoken/_educational.py
-
-- 为什么 BPE 压缩会收到 unused byte 的约束，但是 BPE tokenize 的时候不会？
-
-"""
+"""Reference: https://github.com/openai/tiktoken/blob/main/tiktoken/_educational.py"""
 
 from collections import Counter
 from functools import lru_cache
@@ -32,36 +27,59 @@ def merge_pair(byte_arr:tuple[bytes], pair:tuple[bytes, bytes]) -> tuple[bytes]:
     merged.append(byte_arr[j])
   return tuple(merged)
 
-def train(word_bytes:list[tuple[bytes]], vocab_size:int) -> dict[bytes, int]:
-  # train tokenizer, i.e. build a vocabulary from input data
+def train(word_bytes:list[tuple[bytes]], vocab_size:int, fast:bool=True) -> dict[bytes, int]:
+  # the initial vocabulary contains 256 byte values
   vocab = {i.to_bytes(): i for i in range(2**8)}
-  while len(vocab) < vocab_size:
-    counter = Counter(t for bs in word_bytes for t in zip(bs[:-1], bs[1:]))
-    if not counter:
-      print(f"No pair can be futher construct from data. current vocab_size={len(vocab)}")
-      break
-    pair, _ = counter.most_common(1)[0]
+
+  pair_cnt = Counter(t for ba in word_bytes for t in zip(ba[:-1], ba[1:]))
+  while len(vocab) < vocab_size and pair_cnt:
+    pair, _ = pair_cnt.most_common(1)[0]
     token_bytes = pair[0] + pair[1]
     # add to vocab
     vocab[token_bytes] = len(vocab)
+
+    if fast: # modify pair_cnt inplace
+      for ba in word_bytes:
+        for l in range(len(ba) - 1):
+          if (ba[l], ba[l+1]) != pair:
+            continue
+          r = l + 2
+          if ba[l-2:l] != pair:
+            if l > 0:
+              pair_cnt[(ba[l-1], pair[0])] -= 1
+              pair_cnt[(ba[l-1], token_bytes)] += 1
+          if ba[r:r+2] != pair:
+            if r < len(ba):
+              pair_cnt[(pair[1], ba[r])] -= 1
+              pair_cnt[(token_bytes, ba[r])] += 1
+          else:
+            pair_cnt[(pair[1], pair[0])] -= 1
+            pair_cnt[(token_bytes, token_bytes)] += 1
+      # pop the most frequent pair in pair_cnt
+      pair_cnt.pop(pair)
+
     # merge word bytes
-    for i, bs in enumerate(word_bytes):
-      word_bytes[i] = merge_pair(bs, pair)
+    for i, ba in enumerate(word_bytes):
+      word_bytes[i] = merge_pair(ba, pair)
+
+    if not fast: # simply re-calculate pair_cnt
+      pair_cnt = Counter(t for ba in word_bytes for t in zip(ba[:-1], ba[1:]))
+
   return vocab
 
 def encode(word_bytes:list[tuple[bytes]], vocab:dict[bytes, int]) -> list[int]:
   tokens = []
-  for bs in word_bytes:
+  for ba in word_bytes:
     while True:
       min_rank, pair = len(vocab), None
-      for p in zip(bs[:-1], bs[1:]):
+      for p in zip(ba[:-1], ba[1:]):
         token = vocab.get(p[0]+p[1])
         if token is not None and token < min_rank:
           min_rank, pair = token, p
       if min_rank == len(vocab):
         break
-      bs = merge_pair(bs, pair)
-    tokens.extend(vocab[b] for b in bs)
+      ba = merge_pair(ba, pair)
+    tokens.extend(vocab[b] for b in ba)
   return tokens
 
 def decode(tokens:list[int], vocab:dict[bytes, int]):
@@ -81,9 +99,12 @@ if __name__ == "__main__":
   gpt2_pattern = r"""'s|'t|'re|'ve|'m|'ll|'d| ?[\p{L}]+| ?[\p{N}]+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
   word_bytes = preprocess(inputs, gpt2_pattern)
 
+  import time
+  st = time.monotonic()
   # train
-  vocab = train(word_bytes, vocab_size=vocab_size)
-  print(f"vocab={vocab}")
+  vocab = train(word_bytes, vocab_size=vocab_size, fast=True)
+  #print(f"vocab={vocab}")
+  print(time.monotonic() - st)
 
   # encode
   inputs = "thousand of cities from home, wonder into the unknown"

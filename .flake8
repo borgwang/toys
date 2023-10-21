@@ -1,4 +1,4 @@
 [flake8]
 indent-size = 2
 per-file-ignores = __init__.py:F401
-select = F,E112,E113,E203,E271,E304,E305,E502,E702,E703,E71,E72,E731,E741,W191,W6
+select = F,E112,E113,E203,E271,E304,E305,E502,E702,E703,E71,E72,E731,W191,W6
