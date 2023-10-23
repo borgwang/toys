@@ -1,19 +1,16 @@
 """Reference: https://github.com/openai/tiktoken/blob/main/tiktoken/_educational.py"""
 
 from collections import Counter
-from functools import lru_cache
 
 import regex
 
 
-def preprocess(inputs:str, pattern:str) -> list[list[bytes]]:
+def preprocess(inputs:str, pattern:str) -> list[tuple[bytes, ...]]:
   words:list[str] = regex.findall(pattern, inputs)
   print(f"split to {len(words)} words. {len(set(words))} unique word.")
-  word_bytes = [tuple(bytes([c]) for c in word.encode("utf-8")) for word in words]
-  return word_bytes
+  return [tuple(c.to_bytes() for c in word.encode("utf-8")) for word in words]
 
-@lru_cache(maxsize=None)
-def merge_pair(byte_arr:tuple[bytes], pair:tuple[bytes, bytes]) -> tuple[bytes]:
+def merge_pair(byte_arr:tuple[bytes], pair:tuple[bytes, bytes]) -> tuple[bytes, ...]:
   j = 0
   merged = []
   while j < len(byte_arr) - 1:
@@ -27,18 +24,19 @@ def merge_pair(byte_arr:tuple[bytes], pair:tuple[bytes, bytes]) -> tuple[bytes]:
     merged.append(byte_arr[j])
   return tuple(merged)
 
-def train(word_bytes:list[tuple[bytes]], vocab_size:int, fast:bool=True) -> dict[bytes, int]:
+def train(word_bytes:list[tuple[bytes, ...]], vocab_size:int, fast:bool=True) -> dict[bytes, int]:
   # the initial vocabulary contains 256 byte values
   vocab = {i.to_bytes(): i for i in range(2**8)}
 
   pair_cnt = Counter(t for ba in word_bytes for t in zip(ba[:-1], ba[1:]))
   while len(vocab) < vocab_size and pair_cnt:
-    pair, _ = pair_cnt.most_common(1)[0]
+    # most common pair
+    pair = pair_cnt.most_common(1)[0][0]
     token_bytes = pair[0] + pair[1]
     # add to vocab
     vocab[token_bytes] = len(vocab)
 
-    if fast: # modify pair_cnt inplace
+    if fast: # modify pair_cnt inplace if fast=True
       for ba in word_bytes:
         for l in range(len(ba) - 1):
           if (ba[l], ba[l+1]) != pair:
@@ -62,13 +60,13 @@ def train(word_bytes:list[tuple[bytes]], vocab_size:int, fast:bool=True) -> dict
     for i, ba in enumerate(word_bytes):
       word_bytes[i] = merge_pair(ba, pair)
 
-    if not fast: # simply re-calculate pair_cnt
+    if not fast: # simply re-calculate pair_cnt if fast=False
       pair_cnt = Counter(t for ba in word_bytes for t in zip(ba[:-1], ba[1:]))
 
   return vocab
 
-def encode(word_bytes:list[tuple[bytes]], vocab:dict[bytes, int]) -> list[int]:
-  tokens = []
+def encode(word_bytes:list[tuple[bytes, ...]], vocab:dict[bytes, int]) -> list[int]:
+  tokens:list[int] = []
   for ba in word_bytes:
     while True:
       min_rank, pair = len(vocab), None
@@ -82,12 +80,11 @@ def encode(word_bytes:list[tuple[bytes]], vocab:dict[bytes, int]) -> list[int]:
     tokens.extend(vocab[b] for b in ba)
   return tokens
 
-def decode(tokens:list[int], vocab:dict[bytes, int]):
+def decode(tokens:list[int], vocab:dict[bytes, int]) -> str:
   decoder = {i: b for b, i in vocab.items()}
   decoded_bytes =  b"".join(decoder[t] for t in tokens)
   # replace the invalid bytes with "�"
-  decoded = decoded_bytes.decode("utf-8", errors="replace")
-  return decoded
+  return decoded_bytes.decode("utf-8", errors="replace")
 
 
 if __name__ == "__main__":
@@ -99,12 +96,9 @@ if __name__ == "__main__":
   gpt2_pattern = r"""'s|'t|'re|'ve|'m|'ll|'d| ?[\p{L}]+| ?[\p{N}]+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
   word_bytes = preprocess(inputs, gpt2_pattern)
 
-  import time
-  st = time.monotonic()
   # train
   vocab = train(word_bytes, vocab_size=vocab_size, fast=True)
-  #print(f"vocab={vocab}")
-  print(time.monotonic() - st)
+  print(f"vocab={vocab}")
 
   # encode
   inputs = "thousand of cities from home, wonder into the unknown"
