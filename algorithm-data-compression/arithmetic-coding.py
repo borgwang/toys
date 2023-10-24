@@ -10,7 +10,6 @@ getcontext().prec = 100000
 random.seed(31)
 
 def encode(inputs:List[str]) -> bytes:
-  """encode inputs to bytes"""
   # calculate the target interval
   start, end = Decimal("0.0"), Decimal("1.0")
   for c in inputs:
@@ -38,7 +37,6 @@ def encode(inputs:List[str]) -> bytes:
   return header + bytes_data
 
 def decode(inputs:bytes) -> List[str]:
-  """decode from bytes"""
   # parse data length and data bits
   length = int.from_bytes(inputs[:4])
   bits = bin(int.from_bytes(inputs[4:]))[2+1:]
@@ -77,9 +75,13 @@ def decode(inputs:bytes) -> List[str]:
 
 if __name__ == "__main__":
   # create some random text
-  N = 5000
+  N = 10000
   vocab = sorted(string.ascii_uppercase+string.digits)
   inputs = random.choices(vocab, k=N)
+
+  #with open("./data/TinyStoriesV2-GPT4-valid.txt", "r") as f:
+  #  inputs = [i for i in f.read()[:N]]
+  #vocab = sorted(set(inputs))
 
   # calculate probabilities and cumulative probabilities for each symbol
   counter = sorted(Counter(inputs).items())
@@ -101,7 +103,9 @@ if __name__ == "__main__":
   et = time.monotonic()
   print(f"decode time cost: {et-st:.4f}s")
 
+  print("-----------")
   assert inputs == decoded
+
 
   print(f"input size: {len(inputs):,} B")
   print(f"compressed size: {len(encoded):,} B")
