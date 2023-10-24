@@ -20,7 +20,7 @@ repos:
         name: flake8
         entry: flake8 . --statistics -j4
         language: system
-        alway_run: true
+        always_run: true
         pass_filenames: false
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.0
@@ -33,6 +33,6 @@ repos:
         name: pylint
         entry: pylint .
         language: system
-        alway_run: true
+        always_run: true
         pass_filenames: false
         args: ["--recursive=true"]
