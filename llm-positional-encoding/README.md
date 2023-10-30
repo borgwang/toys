@@ -42,7 +42,7 @@ $$
 
 #### 做法
 
-![RoPE](.assets-position-encoding/RoPE.png)
+![RoPE](RoPE.png)
 
 - 将二维向量当成复数 \
   假设 q 和 k 是只有两维的向量，Attention 里面核心的操作是求 qk 的内积 $\boldsymbol{q} \cdot \boldsymbol{k}$
