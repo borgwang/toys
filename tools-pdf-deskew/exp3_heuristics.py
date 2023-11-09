@@ -1,17 +1,19 @@
 import argparse
 import multiprocessing
 import os
+import tempfile
 import time
 from collections import defaultdict
+from functools import partial
 
 import cv2
+import img2pdf
 import numpy as np
 from evaluate import evaluate
 from pdf2image import convert_from_path
 from PIL import Image, ImageDraw
 from sklearn.linear_model import LinearRegression
-
-SCALE_FACTOR = 4
+from tqdm.auto import tqdm
 
 DEGREE_LB = -1.2
 DEGREE_UB = 1.2 + 1e-8
@@ -20,24 +22,42 @@ DEGREE_STEP = 0.02
 DETECT_PART_TOP_BOTTOM = 1/3
 DETECT_PART_LEFT_RIGHT = 1/3
 
-DPI = 400
+DPI = 200
 PLOT = int(os.getenv("PLOT", "0"))
 WORKERS = int(os.getenv("WORKERS", "8"))
 
+def func_star(func, args):
+  return func(*args)
+
+def multiprocs(func, argslist, n_workers:int=4, progress:bool=False, ordered:bool=True, star:bool=False):
+  try:
+    with multiprocessing.Pool(n_workers) as pool:
+      map_ = pool.imap if ordered else pool.imap_unordered
+      func = partial(func_star, func) if star else func
+      if progress:
+        ret = []
+        with tqdm(total=len(argslist), smoothing=0.01, dynamic_ncols=True) as pbar:
+          for r in map_(func, argslist):
+            pbar.update()
+            ret.append(r)
+      else:
+        ret = list(map_(func, argslist))
+    return ret
+  except Exception as e:
+    raise e
+
 def process(arr):
+  if arr.mean() > 255*0.95:
+    return arr
+
   # step1: get edges and corner points
-  sarr = arr[::SCALE_FACTOR, ::SCALE_FACTOR]
-  edges = get_edges(sarr)
+  edges = get_edges(arr)
   points = {
       "tl": get_intersection(edges["top"], edges["left"]),
       "tr": get_intersection(edges["top"], edges["right"]),
       "br": get_intersection(edges["bottom"], edges["right"]),
       "bl": get_intersection(edges["bottom"], edges["left"])
   }
-  for name in points:
-    points[name] *= SCALE_FACTOR
-  for name in edges:
-    edges[name] *= SCALE_FACTOR
   # step2: deskew
   newarr = transform(arr, points)
 
@@ -46,14 +66,12 @@ def process(arr):
     draw = ImageDraw.Draw(img)
     for edge in edges.values():
       draw.line(tuple(edge), fill="black", width=2)
-    r = 4
-    for w, h in points.values():
-      draw.ellipse((w - r, h - r, w + r, h + r), fill="black")
     img.show()
     Image.fromarray(newarr).show()
   return newarr
 
 def get_edges(arr):
+  arr = cv2.medianBlur(arr, 5)
   h, w = arr.shape
   edges = {}
 
@@ -64,11 +82,12 @@ def get_edges(arr):
     for degree in np.arange(DEGREE_LB, DEGREE_UB, DEGREE_STEP):
       tan = np.tan(np.abs(degree) / 180 * np.pi)
       if side == "top":
-        y_ = tan * (w - x_) if degree > 0 else tan * x_
+        y_ = tan*(w-x_) if degree > 0 else tan*x_
       else:
-        y_ = h - tan * x_ if degree > 0 else h - tan * (w - x_)
+        y_ = h-tan*x_ if degree > 0 else h-tan*(w-x_)
       y_ = y_.astype(int)
-      concentration = np.array([np.mean(arr[y_ + offset, x_]) for offset in offsets])
+      #concentration = np.array([np.mean(arr[y_ + offset, x_]) for offset in offsets])
+      concentration = arr[y_.reshape((1, -1))+offsets.reshape((-1, 1)), np.tile(x_, (len(offsets), 1))].mean(1, dtype=np.float32)
       variance = ((concentration[1:] - concentration[:-1]) ** 2).sum()
       if variance >= best["var"]:
         best["var"] = variance
@@ -85,12 +104,12 @@ def get_edges(arr):
     for degree in np.arange(DEGREE_LB, DEGREE_UB, DEGREE_STEP):
       tan = np.tan(np.abs(degree) / 180 * np.pi)
       if side == "left":
-        x_ = tan * y_ if degree > 0 else tan * (h - y_)
+        x_ = tan*y_ if degree > 0 else tan*(h-y_)
       else:
-        x_ = w - tan * (h - y_) if degree > 0 else w - tan * y_
+        x_ = w-tan*(h-y_) if degree > 0 else w-tan*y_
       x_ = x_.astype(int)
-
-      concentration = np.array([np.mean(arr[y_, x_ + offset]) for offset in offsets])
+      #concentration = np.array([np.mean(arr[y_, x_ + offset]) for offset in offsets])
+      concentration = arr[np.tile(y_, (len(offsets), 1)), x_.reshape((1, -1))+offsets.reshape((-1, 1))].mean(1, dtype=np.float32)
       variance = np.var(concentration)
       if variance >= best["var"]:
         best["var"] = variance
@@ -117,35 +136,35 @@ def get_intersection(line1, line2):
 
 def transform(arr, points):
 
-  def calculate_distance(p1, p2):
+  def distance(p1, p2):
     return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
 
   oh, ow = arr.shape
-  h1 = calculate_distance(points["tl"], points["bl"])
-  h2 = calculate_distance(points["tr"], points["br"])
+  h1 = distance(points["tl"], points["bl"])
+  h2 = distance(points["tr"], points["br"])
   th = max(int(h1), int(h2))
-  w1 = calculate_distance(points["tl"], points["tr"])
-  w2 = calculate_distance(points["bl"], points["br"])
+  w1 = distance(points["tl"], points["tr"])
+  w2 = distance(points["bl"], points["br"])
   tw = max(int(w1), int(w2))
 
-  dst = np.array([[0, 0], [tw - 1, 0], [tw - 1, th - 1], [0, th - 1]], dtype="float32")
+  dst = np.array([[0, 0], [tw-1, 0], [tw-1, th-1], [0, th-1]], dtype="float32")
   src = np.array(list(points.values()), dtype="float32")
   M = cv2.getPerspectiveTransform(src, dst)
   newarr = cv2.warpPerspective(arr, M, (tw, th))
   # padding
-  pad_h, pad_w = (oh - th) // 2, (ow - tw) // 2
-  return np.pad(newarr, ((pad_h, oh - th - pad_h), (pad_w, ow - tw - pad_w)), constant_values=255)
+  pad_h, pad_w = (oh-th)//2, (ow-tw)//2
+  return np.pad(newarr, ((pad_h, oh-th-pad_h), (pad_w, ow-tw-pad_w)), constant_values=255)
 
 def change_dectection(points, step=1):
   points = np.array(points)[:, np.newaxis]
   xs = np.arange(len(points))[:, np.newaxis]
   best_err, best_sep = float("inf"), None
-  model1 = LinearRegression()
+  model = LinearRegression()
   for sep in range(step, len(points), step):
-    model1.fit(xs[:sep], points[:sep])
-    err1 = (np.abs(model1.predict(xs[:sep]) - points[:sep]) ** 0.1).sum()
-    model1.fit(xs[sep:], points[sep:])
-    err2 = (np.abs(model1.predict(xs[sep:]) - points[sep:]) ** 0.1).sum()
+    model.fit(xs[:sep], points[:sep])
+    err1 = (np.abs(model.predict(xs[:sep]) - points[:sep]) ** 0.1).sum()
+    model.fit(xs[sep:], points[sep:])
+    err2 = (np.abs(model.predict(xs[sep:]) - points[sep:]) ** 0.1).sum()
     total_err = err1 + err2
     if total_err < best_err:
       best_err = total_err
@@ -155,8 +174,9 @@ def change_dectection(points, step=1):
 def main():
   assert os.path.exists(args.input)
   last_page = None if args.n_pages is None else args.first_page + args.n_pages - 1
+
   st = time.monotonic()
-  imgs = convert_from_path(args.input, thread_count=10, first_page=args.first_page,
+  imgs = convert_from_path(args.input, thread_count=8, first_page=args.first_page,
                            last_page=last_page, grayscale=True, dpi=DPI)
   print(f"[INFO] convert to images done. time cost: {time.monotonic() - st:.4f}s")
   print(f"[INFO] {len(imgs)} pages in total. start from page {args.first_page}")
@@ -164,17 +184,22 @@ def main():
   print(f"[INFO] page size: {arrs[0].shape}")
 
   st = time.monotonic()
-  if WORKERS == 1:
+  if WORKERS == 1 or len(arrs) == 1:
     newarrs = [process(arr) for arr in arrs]
   elif WORKERS > 1:
-    with multiprocessing.Pool(WORKERS) as pool:
-      newarrs = pool.map(process, arrs)
+    newarrs = multiprocs(process, arrs, n_workers=WORKERS, progress=True)
   scores = [evaluate(arr, newarr, i+args.first_page) for i, (arr, newarr) in enumerate(zip(arrs, newarrs))]
-  print(f"[INFO] mean score: {np.mean(scores):.4f}")
+  print(f"[INFO] mean score: {100*np.mean(scores):.2f}%")
   print(f"[INFO] time cost: {time.monotonic() - st:.4f}s")
 
-  newimgs = [Image.fromarray(arr) for arr in newarrs]
-  newimgs[0].save(args.output, save_all=True, append_images=newimgs[1:])
+  # dump to pdf file
+  layout_fun = img2pdf.get_fixed_dpi_layout_fun((DPI, DPI))
+  with tempfile.TemporaryDirectory() as td:
+    paths = [os.path.join(td, f"{i}.tiff") for i in range(len(newarrs))]
+    for path, arr in zip(paths, newarrs):
+      Image.fromarray(arr).save(path)
+    with open(args.output, "wb") as f:
+      f.write(img2pdf.convert(paths, layout_fun=layout_fun))
   print(f"[INFO] save to {args.output}")
 
 
