@@ -1,9 +1,9 @@
 import time
 
 import numpy as np
-from common import gelu, layer_norm, linear, softmax
 from generator import Generator
 from transformers import GPT2Model, GPT2Tokenizer
+from utils import gelu, layer_norm, linear, softmax
 
 
 class GPT2:

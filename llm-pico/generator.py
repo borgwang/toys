@@ -1,4 +1,4 @@
-from common import sample, softmax
+from utils import sample, softmax
 
 
 class Generator:

@@ -3,9 +3,9 @@ import time
 
 import numpy as np
 import torch
-from common import download_file, linear, rms_norm, silu, softmax
 from generator import Generator
 from sentencepiece import SentencePieceProcessor
+from utils import download_file, linear, rms_norm, silu, softmax
 
 
 class Tokenizer:
