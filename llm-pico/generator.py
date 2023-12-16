@@ -1,3 +1,4 @@
+import numpy as np
 from utils import sample, softmax
 
 
@@ -21,8 +22,8 @@ class Generator:
     while cnt < self.max_tokens:
       ids_cond = (start_ids + gen_ids)
       logits = self.model.forward(ids_cond)
-      p = softmax(logits / (self.t + 1e-8))
-      gen_ids.append(sample(p))
+      out_id = int(np.argmax(logits)) if self.t == 0 else sample(softmax(logits / (self.t + 1e-8)))
+      gen_ids.append(out_id)
       cnt += 1
       if self.stream:
         self.streamprint(start_ids + gen_ids)

@@ -53,12 +53,13 @@ class LLaMA2:
     if self.enable_kv_cache and self.kv_cache:
       x = self.p["tok_embeddings.weight"][ids[-1:]]
     for i in range(self.hparams["n_layers"]):
-      x = self.transformer_block(x, i)
+      x = self.transformer(x, i)
     x = rms_norm(x, self.p["norm.weight"])
     x = x[-1] if only_last else x
     return x @ self.p["output.weight"]
 
-  def transformer_block(self, x, i):
+  def transformer(self, x, i):
+    # pre-norm with RMSNorm
     x = x + self.attn(rms_norm(x, self.p[f"layers.{i}.attention_norm.weight"]), i)
     x = x + self.ffn(rms_norm(x, self.p[f"layers.{i}.ffn_norm.weight"]), i)
     return x
@@ -76,8 +77,7 @@ class LLaMA2:
       self.kv_cache[i] = (k, v)
 
     cos, sin = self.cos[:len(k)], self.sin[:len(k)]
-    q = self.apply_rotation(q, cos[-len(q):], sin[-len(q):])
-    k = self.apply_rotation(k, cos, sin)
+    q, k = self.apply_rotation(q, cos[-len(q):], sin[-len(q):]), self.apply_rotation(k, cos, sin)
     q, k, v = (np.transpose(h, (1,0,2)) for h in (q, k, v))  # (n_head, T, hs)
 
     attn = softmax(q @ np.transpose(k, (0,2,1)) / hs**0.5 + (1 - np.tri(T, dtype=np.float32)) * -1e10)
@@ -106,7 +106,7 @@ class LLaMA2:
 
   @staticmethod
   def load_state_dict(model_type):
-    local_path = os.path.join("/tmp/pico-llama2", model_type + ".pt")
+    local_path = os.path.join(tmpdir, model_type + ".pt")
     if not os.path.exists(local_path):
       url = f"https://huggingface.co/karpathy/tinyllamas/resolve/main/stories{model_type}.pt"
       download_file(url, local_path)
@@ -124,7 +124,7 @@ if __name__ == "__main__":
   tokenizer = Tokenizer()
 
   prompt = "Lily is a bad girl"
-  gen = Generator(model, tokenizer, t=0)
+  gen = Generator(model, tokenizer, t=1.0)
 
   st = time.monotonic()
   toks, text = gen(prompt)

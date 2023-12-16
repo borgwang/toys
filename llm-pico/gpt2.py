@@ -15,7 +15,6 @@ class GPT2:
     "gpt2-xl":     dict(n_layer=48, n_head=25, n_embed=1600),  # 1558M params
   }
 
-
   def __init__(self, model_type, kv_cache=True):
     self.hparams = self.hparams_dict[model_type]
     self.ctx_size = 1024
@@ -31,12 +30,13 @@ class GPT2:
       x = wte[ids[-1:]] + wpe[[len(ids)-1]]
 
     for i in range(self.hparams["n_layer"]):
-      x = self.transformer_block(x, i)
+      x = self.transformer(x, i)
     x = layer_norm(x, self.p["ln_f.weight"], self.p["ln_f.bias"])
     logits = x[-1] @ wte.T
     return logits
 
-  def transformer_block(self, x, i):
+  def transformer(self, x, i):
+    # pre-norm
     x = x + self.attn(layer_norm(x, self.p[f"h.{i}.ln_1.weight"], self.p[f"h.{i}.ln_1.bias"]), i)
     x = x + self.ffn(layer_norm(x, self.p[f"h.{i}.ln_2.weight"], self.p[f"h.{i}.ln_2.bias"]), i)
     return x
