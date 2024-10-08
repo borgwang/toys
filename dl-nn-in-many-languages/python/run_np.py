@@ -4,8 +4,12 @@ import pandas as pd
 N_EPOCH = 1000
 LR = 0.0003
 BS = 30
+IN_DIM = 4
+OUT_DIM = 3
+HIDDEN_DIM = 20
+LR = 0.0003
 
-def load_dataset(path):
+def load_dataset(path:str):
   feat_cols = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
   label_col = ["label"]
   data = pd.read_csv(path, names=feat_cols + label_col)
@@ -32,7 +36,7 @@ def load_dataset(path):
 def softmax(inputs):
   return np.exp(inputs) / np.sum(np.exp(inputs), 1)[:, None]
 
-def init_params(in_dim, out_dim, hidden_dim=20):
+def init_params(in_dim, out_dim, hidden_dim):
   bound1 = np.sqrt(6.0 / (in_dim + hidden_dim))
   W1 = np.random.uniform(-bound1, bound1, size=[in_dim, hidden_dim])
   b1 = np.zeros(hidden_dim)
@@ -51,13 +55,14 @@ def train(batch_x, batch_y, params):
   p = softmax(h2)
 
   # NLL loss
-  loss = np.mean(-np.log(np.sum(p * batch_y, 1)))
-  print(f"loss: {loss:.4f}")
+  # loss = np.mean(-np.log(np.sum(p * batch_y, 1)))
+  # print(f"loss: {loss:.4f}")
 
   # backward
   dl_dh2 = p - batch_y  # [batch, 3]
   dl_dW2 = np.dot(a1.T, dl_dh2)
   dl_db2 = np.sum(dl_dh2, 0)
+
   dl_da1 = np.dot(dl_dh2, W2.T)
   da1_dh1 = (h1 > 0).astype(float)
   dl_dh1 = dl_da1 * da1_dh1
@@ -82,8 +87,8 @@ def evaluate(batch_x, batch_y, params):
 
 def main():
   # prepare dataset
-  train_x, train_y, test_x, test_y = load_dataset( "../data/iris.data")
-  params = init_params(4, 3)
+  train_x, train_y, test_x, test_y = load_dataset("../data/iris.data")
+  params = init_params(IN_DIM, OUT_DIM, HIDDEN_DIM)
   for epoch in range(N_EPOCH):
     for b in range(len(train_x) // BS):
       batch_x = train_x[b * BS: (b + 1) * BS]

@@ -51,14 +51,17 @@ class BBPETokenizer:
             continue
           r = l + 2
           if ba[l-2:l] != pair:
+            # replace "ab" to "x" in "cab" -> decrease count("ca") and increse count("cx")
             if l > 0:
               pair_cnt[(ba[l-1], pair[0])] -= 1
               pair_cnt[(ba[l-1], token_bytes)] += 1
           if ba[r:r+2] != pair:
+            # replace "ab" to "x" in "abc" -> decrease count("bc") and increse count("xc")
             if r < len(ba):
               pair_cnt[(pair[1], ba[r])] -= 1
               pair_cnt[(token_bytes, ba[r])] += 1
           else:
+            # replace "ab" to "x" in "abab" -> decrease count("ba") and increse count("xx")
             pair_cnt[(pair[1], pair[0])] -= 1
             pair_cnt[(token_bytes, token_bytes)] += 1
 

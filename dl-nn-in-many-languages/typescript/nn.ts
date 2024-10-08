@@ -259,6 +259,3 @@ for (let ep = 0; ep < numEpochs; ep++) {
     evaluate(params, dataset.test)
   }
 }
-
-// evaluate
-//

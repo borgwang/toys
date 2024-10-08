@@ -178,6 +178,7 @@ def main():
   st = time.monotonic()
   imgs = convert_from_path(args.input, thread_count=8, first_page=args.first_page,
                            last_page=last_page, grayscale=True, dpi=DPI)
+
   print(f"[INFO] convert to images done. time cost: {time.monotonic() - st:.4f}s")
   print(f"[INFO] {len(imgs)} pages in total. start from page {args.first_page}")
   arrs = [np.array(img) for img in imgs]

@@ -15,3 +15,7 @@ tools-pdf-deskew/*.pdf
 .vscode
 
 algorithm-data-compression/data
+
+# dl-nn-in-many-languages
+dl-nn-in-many-languages/rust/target
+dl-nn-in-many-languages/rust/*.lock
