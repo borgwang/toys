@@ -1,1 +1,0 @@
-npx tsx nn.ts

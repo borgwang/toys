@@ -11,6 +11,10 @@ OUT_DIM = 3
 HIDDEN_DIM = 20
 LR = 0.0003
 
+PARAMS_PATH = "data/params.txt"
+DATA_PATH = "data/iris.data"
+SPLIT_PATH = "data/split.txt"
+
 def load_dataset(path:str, split_path:str):
   # Read CSV without pandas
   with open(path, "r") as f:
@@ -79,9 +83,9 @@ def main():
   st = time.perf_counter()
 
   # prepare dataset
-  train_x, train_y, test_x, test_y = load_dataset("../data/iris.data", "../data/split.txt")
+  train_x, train_y, test_x, test_y = load_dataset(DATA_PATH, SPLIT_PATH)
   # load params
-  with open("../data/params.txt", "r") as f:
+  with open(PARAMS_PATH, "r") as f:
     W1 = np.array(list(map(float, f.readline().split(","))), dtype=np.float32).reshape([IN_DIM, HIDDEN_DIM])
     b1 = np.array(list(map(float, f.readline().split(","))), dtype=np.float32).reshape([HIDDEN_DIM])
     W2 = np.array(list(map(float, f.readline().split(","))), dtype=np.float32).reshape([HIDDEN_DIM, OUT_DIM])

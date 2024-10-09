@@ -12,6 +12,10 @@
 #define BS 30
 #define LR 0.0003f
 
+#define DATA_PATH "data/iris.data"
+#define SPLIT_PATH "data/split.txt"
+#define PARAMS_PATH "data/params.txt"
+
 typedef struct params {
   float w1[IN_DIM][HIDDEN_DIM];
   float b1[HIDDEN_DIM];
@@ -42,7 +46,7 @@ void initialize_params(params_t *params) {
 }
 
 void load_params(params_t *params) {
-  FILE *fp = fopen("../data/params.txt", "r");
+  FILE *fp = fopen(PARAMS_PATH, "r");
   char line[1024];
   char *token;
   if (fgets(line, sizeof(line), fp)) {
@@ -303,7 +307,7 @@ void parse_example(char* line, float* feat, float* label) {
 }
 
 void load_dataset(float feats[][IN_DIM], float labels[][OUT_DIM]) {
-  FILE *fp = fopen("../data/iris.data", "r");
+  FILE *fp = fopen(DATA_PATH, "r");
   char line[64];
   size_t i = 0;
   while (fgets(line, 64, fp)) {
@@ -338,7 +342,7 @@ void preprocess_dataset(float feats[][IN_DIM], float labels[][OUT_DIM]) {
   }
 
   /* shuffle dataset */
-  FILE *fp = fopen("../data/split.txt", "r");
+  FILE *fp = fopen(SPLIT_PATH, "r");
   char line[512];
   int random_indices[N_EXAMPLES];
   int count = 0;

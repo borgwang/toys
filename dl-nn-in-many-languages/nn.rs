@@ -11,6 +11,9 @@ const HIDDEN_DIM: usize = 20;
 const BS: usize = 30;
 const LR: f32 = 0.0003;
 
+const PARAMS_PATH: &str = "data/params.txt";
+const DATA_PATH: &str = "data/iris.data";
+const SPLIT_PATH: &str = "data/split.txt";
 
 #[derive(Debug)]
 struct Params {
@@ -341,15 +344,15 @@ fn main() {
 
   let mut x: Vec<[f32; IN_DIM]> = Vec::new();
   let mut y: Vec<[f32; OUT_DIM]> = Vec::new();
-  load_dataset("../data/iris.data", &mut x, &mut y);
+  load_dataset(DATA_PATH, &mut x, &mut y);
 
   let mut dataset = Dataset::new(x, y);
   dataset.normalize();
-  let (mut train_set, test_set) = dataset.split("../data/split.txt");
+  let (mut train_set, test_set) = dataset.split(SPLIT_PATH);
 
   // init params
   let mut params = Params::new();
-  params.from_file("../data/params.txt");
+  params.from_file(PARAMS_PATH);
 
   // train & evaluate
   let test_x: [[f32; IN_DIM]; BS] = test_set.x.clone().try_into().unwrap();

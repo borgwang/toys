@@ -8,6 +8,10 @@ const IN_DIM = 4
 const OUT_DIM = 3
 const HIDDEN_DIM = 20
 
+const PARAMS_PATH = "data/params.txt"
+const DATA_PATH = "data/iris.data"
+const SPLIT_PATH = "data/split.txt"
+
 function mSum(A: number[][]): number {
   let ret = 0
   for (let i = 0; i < A.length; i++) {
@@ -69,7 +73,7 @@ interface Dataset {
 }
 
 function getInitParams(inDim: number, outDim: number, hiddenDim: number): Params {
-  const data = fs.readFileSync('../data/params.txt', 'utf-8');
+  const data = fs.readFileSync(PARAMS_PATH, 'utf-8');
   const lines = data.trim().split('\n');
 
   const w1 = lines[0].split(',').map(Number);
@@ -102,7 +106,7 @@ function readCsv(path: string): string[][] {
 }
 
 function prepareDataset(): {train: Dataset, test: Dataset} {
-  let data: string[][] = readCsv("../data/iris.data")
+  let data: string[][] = readCsv(DATA_PATH)
   let labels: number[][] = []
   let feats: number[][] = []
   let numColumns = data[0].length
@@ -137,7 +141,7 @@ function prepareDataset(): {train: Dataset, test: Dataset} {
   feats = feats.map(feat => feat.map((f, i) => (f - meanX[i]) / stdX[i]))
 
   // Read random indices from split.txt
-  let indices = fs.readFileSync('../data/split.txt', 'utf-8').trim().split('\n').map(line => line.split(",").map(Number));
+  let indices = fs.readFileSync(SPLIT_PATH, 'utf-8').trim().split('\n').map(line => line.split(",").map(Number));
   let trainIndices = indices[0]
   let testIndices = indices[1]
   // Use the indices to split the dataset
