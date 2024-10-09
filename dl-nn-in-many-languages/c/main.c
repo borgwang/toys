@@ -24,10 +24,6 @@ float random_uniform(float left, float right) {
   return (a + left) * (right - left);
 }
 
-int random_integer(int left, int right) {
-  return left + rand() % (right - left);
-}
-
 void initialize_params(params_t *params) {
   float bound1 = sqrtf(6.0f / (IN_DIM + HIDDEN_DIM));
   for (size_t col = 0; col < HIDDEN_DIM; col++) {
@@ -45,13 +41,43 @@ void initialize_params(params_t *params) {
   }
 }
 
-void swap(size_t n, float a[n], float b[n]) {
-  float tmp;
-  for (size_t i = 0; i < n; i++) {
-    tmp = a[i];
-    a[i] = b[i];
-    b[i] = tmp;
+void load_params(params_t *params) {
+  FILE *fp = fopen("../data/params.txt", "r");
+  char line[1024];
+  char *token;
+  if (fgets(line, sizeof(line), fp)) {
+    token = strtok(line, ",");
+    for (size_t i = 0; i < IN_DIM; i++) {
+      for (size_t j = 0; j < HIDDEN_DIM; j++) {
+        params->w1[i][j] = atof(token);
+        token = strtok(NULL, ",");
+      }
+    }
   }
+  if (fgets(line, sizeof(line), fp)) {
+    token = strtok(line, ",");
+    for (size_t i = 0; i < HIDDEN_DIM; i++) {
+      params->b1[i] = atof(token);
+      token = strtok(NULL, ",");
+    }
+  }
+  if (fgets(line, sizeof(line), fp)) {
+    token = strtok(line, ",");
+    for (size_t i = 0; i < HIDDEN_DIM; i++) {
+      for (size_t j = 0; j < OUT_DIM; j++) {
+        params->w2[i][j] = atof(token);
+        token = strtok(NULL, ",");
+      }
+    }
+  }
+  if (fgets(line, sizeof(line), fp)) {
+    token = strtok(line, ",");
+    for (size_t i = 0; i < OUT_DIM; i++) {
+      params->b2[i] = atof(token);
+      token = strtok(NULL, ",");
+    }
+  }
+  fclose(fp);
 }
 
 void matmul(size_t M, size_t N, size_t K, float A[M][K], float B[K][N], float ret[M][N]) {
@@ -106,7 +132,7 @@ void softmax(size_t M, size_t N, float A[M][N], float B[M][N]) {
   }
 }
 
-void train(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], size_t start) {
+void train_step(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], size_t start) {
   /* forward */
   float h1[BS][HIDDEN_DIM];
   matmul(BS, HIDDEN_DIM, IN_DIM, &feats[start], params->w1, h1);
@@ -115,10 +141,12 @@ void train(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], siz
       h1[i][j] += params->b1[j];
     }
   }
+
   float a1[BS][HIDDEN_DIM];
   unary_elemwise(BS, HIDDEN_DIM, h1, a1, op_relu);
+
   float h2[BS][OUT_DIM];
-  matmul(BS, OUT_DIM, HIDDEN_DIM, h1, params->w2, h2);
+  matmul(BS, OUT_DIM, HIDDEN_DIM, a1, params->w2, h2);
   for (size_t i = 0; i < BS; i++) {
     for (size_t j = 0; j < OUT_DIM; j++) {
       h2[i][j] += params->b2[j];
@@ -127,6 +155,7 @@ void train(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], siz
 
   float a2[BS][OUT_DIM];
   softmax(BS, OUT_DIM, h2, a2);
+
   /* NLL loss */
   /*
   float loss = 0.0f;
@@ -148,6 +177,7 @@ void train(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], siz
       d_h2[i][j] = a2[i][j] - labels[start + i][j];
     }
   }
+
   float a1_t[HIDDEN_DIM][BS];
   transpose(BS, HIDDEN_DIM, a1, a1_t);
   float d_w2[HIDDEN_DIM][OUT_DIM];
@@ -159,8 +189,10 @@ void train(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], siz
     }
   }
 
+  float w2_t[OUT_DIM][HIDDEN_DIM];
+  transpose(HIDDEN_DIM, OUT_DIM, params->w2, w2_t);
   float d_a1[BS][HIDDEN_DIM];
-  matmul(BS, HIDDEN_DIM, OUT_DIM, d_h2, params->w2, d_a1);
+  matmul(BS, HIDDEN_DIM, OUT_DIM, d_h2, w2_t, d_a1);
 
   float d_h1[BS][HIDDEN_DIM];
   binary_elemwise(BS, HIDDEN_DIM, d_a1, h1, d_h1, op_drelu);
@@ -172,7 +204,7 @@ void train(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], siz
   matmul(IN_DIM, HIDDEN_DIM, BS, x_t, d_h1, d_w1);
 
   float d_b1[HIDDEN_DIM] = {0.0f};
-  for (size_t i = 0; i < IN_DIM; i++) {
+  for (size_t i = 0; i < BS; i++) {
     for (size_t j = 0; j < HIDDEN_DIM; j++) {
       d_b1[j] += d_h1[i][j];
     }
@@ -206,6 +238,7 @@ void evaluate(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], 
       h1[i][j] += params->b1[j];
     }
   }
+
   float a1[test_size][HIDDEN_DIM];
   unary_elemwise(test_size, HIDDEN_DIM, h1, a1, op_relu);
   float h2[test_size][OUT_DIM];
@@ -237,7 +270,18 @@ void evaluate(params_t* params, float feats[][IN_DIM], float labels[][OUT_DIM], 
     }
   }
   float precision = (float)count / test_size;
-  printf("precision: %f\n", precision);
+
+
+  float loss = 0.0f;
+  for (size_t i = 0; i < test_size; i++) {
+    float nll = 0.0f;
+    for (size_t j = 0; j < OUT_DIM; j++) {
+      nll += a2[i][j] * labels[start + i][j];
+    }
+    loss += -logf(nll);
+  }
+  loss /= test_size;
+  printf("precision=%.6f, loss=%.6f\n", precision, loss);
 }
 
 void parse_example(char* line, float* feat, float* label) {
@@ -274,32 +318,60 @@ void load_dataset(float feats[][IN_DIM], float labels[][OUT_DIM]) {
   fclose(fp);
 }
 
-void preprocess_dataset(float feats[][IN_DIM], float labels[][OUT_DIM], int train_size) {
-  /* shuffle dataset */
-  srand(time(NULL));
-  for (int i = N_EXAMPLES - 1; i > 0; i--) {
-    int a = random_integer(0, i);
-    swap(IN_DIM, feats[i], feats[a]);
-    swap(OUT_DIM, labels[i], labels[a]);
-  }
-
+void preprocess_dataset(float feats[][IN_DIM], float labels[][OUT_DIM]) {
   /* normalization */
   for (size_t j = 0; j < IN_DIM; j++) {
     float mean = 0.0f, std = 0.0f;
-    for (size_t i = 0; i < train_size; i++) {
+    for (size_t i = 0; i < N_EXAMPLES; i++) {
       mean += feats[i][j];
     }
-    mean /= train_size;
-    for (size_t i = 0; i < train_size; i++) {
+    mean /= N_EXAMPLES;
+    for (size_t i = 0; i < N_EXAMPLES; i++) {
       std += powf(feats[i][j] - mean, 2);
     }
-    std = sqrtf(std / train_size);
-    printf("dim %zu mean: %f std: %f\n", j, mean, std);
+    std = sqrtf(std / N_EXAMPLES);
+    // printf("dim %zu mean: %f std: %f\n", j, mean, std);
 
     for (size_t i = 0; i < N_EXAMPLES; i++) {
       feats[i][j] = (feats[i][j] - mean) / std;
     }
   }
+
+  /* shuffle dataset */
+  FILE *fp = fopen("../data/split.txt", "r");
+  char line[512];
+  int random_indices[N_EXAMPLES];
+  int count = 0;
+
+  // Read indices
+  if (fgets(line, sizeof(line), fp)) {
+    char *token = strtok(line, ",");
+    while (token) {
+      random_indices[count++] = atoi(token);
+      token = strtok(NULL, ",");
+    }
+  }
+
+  if (fgets(line, sizeof(line), fp)) {
+    char *token = strtok(line, ",");
+    while (token) {
+      random_indices[count++] = atoi(token);
+      token = strtok(NULL, ",");
+    }
+  }
+  fclose(fp);
+
+  // temporary arrays to hold shuffled data
+  float t_feats[N_EXAMPLES][IN_DIM];
+  float t_labels[N_EXAMPLES][OUT_DIM];
+  for (size_t i = 0; i < N_EXAMPLES; i++) {
+    size_t j = random_indices[i];
+    memcpy(t_feats[i], feats[j], sizeof(float) * IN_DIM);
+    memcpy(t_labels[i], labels[j], sizeof(float) * OUT_DIM);
+  }
+  // shuffled data back to original arrays
+  memcpy(feats, t_feats, sizeof(float) * N_EXAMPLES * IN_DIM);
+  memcpy(labels, t_labels, sizeof(float) * N_EXAMPLES * OUT_DIM);
 }
 
 int main() {
@@ -311,20 +383,17 @@ int main() {
   float labels[N_EXAMPLES][OUT_DIM] = {{0.0f}};
 
   load_dataset(feats, labels);
-  preprocess_dataset(feats, labels, train_size);
+  preprocess_dataset(feats, labels);
 
   params_t params;
-  initialize_params(&params);
+  // initialize_params(&params);
+  load_params(&params);
   for (int epoch = 0; epoch < N_EPOCH; epoch++) {
     for (int step = 0; step < train_size / BS; step++) {
-      train(&params, feats, labels, step * BS);
-    }
-    if (epoch % 100 == 0) {
-      printf("epoch %d ", epoch);
-      evaluate(&params, feats, labels, train_size, N_EXAMPLES - train_size);
+      train_step(&params, feats, labels, step * BS);
     }
   }
+  evaluate(&params, feats, labels, train_size, N_EXAMPLES - train_size);
   clock_t end = clock();
-  printf("time cost: %fms\n", (float)(end - start) / CLOCKS_PER_SEC * 1000);
-  return 0;
+  printf("time=%.4fms\n", (float)(end - start) / CLOCKS_PER_SEC * 1000);
 }

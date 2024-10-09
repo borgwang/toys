@@ -19,3 +19,7 @@ algorithm-data-compression/data
 # dl-nn-in-many-languages
 dl-nn-in-many-languages/rust/target
 dl-nn-in-many-languages/rust/*.lock
+dl-nn-in-many-languages/typescript/node_modules
+dl-nn-in-many-languages/typescript/.node_modules
+dl-nn-in-many-languages/typescript/package-lock.json
+dl-nn-in-many-languages/typescript/package.json

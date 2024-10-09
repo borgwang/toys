@@ -1,28 +1,12 @@
 // ts-node run.ts
 import * as fs from 'fs'
 
-function integerRandom(l: number, r: number): number {
-  return Math.floor(uniformRandom(l, r))
-}
-function uniformRandom(l: number = 0, r: number = 1): number {
-  return (Math.random() - l) * (r - l)
-}
-function gaussianRandom(mu: number = 0, sigma: number = 1): number {
-  let u1 = uniformRandom(), u2 = uniformRandom()
-  let z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2)
-  return z0 * sigma + mu
-}
-
-function newArray(m: number, n: number, generator: () => number): number[][] {
-  let ret: number[][] = []
-  for (let i = 0; i < m; i++) {
-    ret[i] = []
-    for (let j = 0; j < n; j++) {
-      ret[i][j] = generator()
-    }
-  }
-  return ret
-}
+const LR = 0.0003
+const N_EPOCH = 1000
+const BS = 30
+const IN_DIM = 4
+const OUT_DIM = 3
+const HIDDEN_DIM = 20
 
 function mSum(A: number[][]): number {
   let ret = 0
@@ -85,21 +69,35 @@ interface Dataset {
 }
 
 function getInitParams(inDim: number, outDim: number, hiddenDim: number): Params {
-  let bound1 = Math.sqrt(6.0 / (inDim + hiddenDim))
-  let bound2 = Math.sqrt(6.0 / (hiddenDim + outDim))
+  const data = fs.readFileSync('../data/params.txt', 'utf-8');
+  const lines = data.trim().split('\n');
+
+  const w1 = lines[0].split(',').map(Number);
+  const b1 = lines[1].split(',').map(Number);
+  const w2 = lines[2].split(',').map(Number);
+  const b2 = lines[3].split(',').map(Number);
+
   return {
-    w1: newArray(inDim, hiddenDim, () => uniformRandom(-bound1, bound1)),
-    b1: newArray(1, hiddenDim, () => 0.0),
-    w2: newArray(hiddenDim, outDim, () => uniformRandom(-bound2, bound2)),
-    b2: newArray(1, outDim, () => 0.0)
+    w1: reshape(w1, inDim, hiddenDim),
+    b1: [b1],
+    w2: reshape(w2, hiddenDim, outDim),
+    b2: [b2]
+  };
+}
+
+function reshape(arr: number[], rows: number, cols: number): number[][] {
+  const result: number[][] = [];
+  for (let i = 0; i < rows; i++) {
+    result.push(arr.slice(i * cols, (i + 1) * cols));
   }
+  return result;
 }
 
 function readCsv(path: string): string[][] {
   let data = fs.readFileSync(path, "utf-8")
   let ret = data.split("\n")
-    .filter(line => line && line.length > 0)
-    .map(line => line.split(","))
+    .filter((line: string) => line && line.length > 0)
+    .map((line: string) => line.split(","))
   return ret
 }
 
@@ -124,46 +122,30 @@ function prepareDataset(): {train: Dataset, test: Dataset} {
       feats[i][j] = parseFloat(data[i][j])
     }
   }
-  // random shuffle (Fisher-Yates)
+
   let numSamples: number = labels.length
-  let shuffleFeats: number[][] = [], shuffleLabels: number[][] = []
-  for (let i = 0; i < numSamples; i++) {
-    let idx: number = integerRandom(0, feats.length)
-    shuffleFeats.push(feats[idx])
-    shuffleLabels.push(labels[idx])
-    feats.splice(idx, 1)
-    labels.splice(idx, 1)
-  }
-  feats = shuffleFeats
-  labels = shuffleLabels
-
-  // split train/test set
-  let numTrain = Math.floor(numSamples * 0.8)
-  let trainX = feats.filter((_, idx) => idx < numTrain)
-  let trainY = labels.filter((_, idx) => idx < numTrain)
-  let testX = feats.filter((_, idx) => idx >= numTrain)
-  let testY = labels.filter((_, idx) => idx >= numTrain)
-
-  // mean and std from trainX
+  // normalize feats
   let meanX: number[] = [], stdX: number[] = []
   for (let i = 0; i < numColumns - 1; i++) {
-    let col = trainX.map(feat => feat[i])
-    let mean = col.reduce((a, b) => (a + b)) / numTrain
-    let variance = col.map(f => Math.pow(f - mean, 2)).reduce((a, b) => (a + b)) / numTrain
+    let col = feats.map(feat => feat[i])
+    let mean = col.reduce((a, b) => (a + b)) / numSamples
+    let variance = col.map(f => Math.pow(f - mean, 2)).reduce((a, b) => (a + b)) / numSamples
     let std = Math.sqrt(variance)
     meanX.push(mean)
     stdX.push(std)
   }
-  console.log(`mean: ${meanX}`)
-  console.log(`std: ${stdX}`)
-  // normalize trainX and testX with mean and std
-  trainX = trainX.map(feat => feat.map((f, i) => (f - meanX[i]) / stdX[i]))
-  testX = testX.map(feat => feat.map((f, i) => (f - meanX[i]) / stdX[i]))
-  return { train: { x: trainX, y: trainY }, test: { x: testX, y: testY } }
-}
+  feats = feats.map(feat => feat.map((f, i) => (f - meanX[i]) / stdX[i]))
 
-function getShape(input: number[][]): number[] {
-  return [input.length, input[0].length]
+  // Read random indices from split.txt
+  let indices = fs.readFileSync('../data/split.txt', 'utf-8').trim().split('\n').map(line => line.split(",").map(Number));
+  let trainIndices = indices[0]
+  let testIndices = indices[1]
+  // Use the indices to split the dataset
+  let trainX = trainIndices.map((index: number) => feats[index]);
+  let trainY = trainIndices.map((index: number) => labels[index]);
+  let testX = testIndices.map((index: number) => feats[index]);
+  let testY = testIndices.map((index: number) => labels[index]);
+  return { train: { x: trainX, y: trainY }, test: { x: testX, y: testY } }
 }
 
 function softmax(logit: number[][]): number[][] {
@@ -184,37 +166,37 @@ function argMax(array: number[]): number {
   return array.map((num, idx) => [idx, num]).reduce((a, b) => (a[1] > b[1] ? a : b))[0]
 }
 
-function train(params: Params, dataset: Dataset) {
+function train_step(params: Params, dataset: Dataset) {
   let numSamples = dataset.x.length
   // forward
   let h1 = mMatMul(dataset.x, params.w1)
   let b1 = Array(numSamples).fill(params.b1[0])
   h1 = mElemwise((a, b) => (a + b), h1, b1)
-
   let a1 = mElemwise(x => x > 0 ? x : 0, h1)
+
   let h2 = mMatMul(a1, params.w2)
   let b2 = Array(numSamples).fill(params.b2[0])
-  let logits = mElemwise((a, b) => (a + b), h2, b2)
+  h2 = mElemwise((a, b) => (a + b), h2, b2)
 
-  let probs = softmax(logits)
-  let loss = getNLLLoss(probs, dataset.y)
-  //console.log("loss: " + loss)
+
+  let probs = softmax(h2)
+  //console.log("loss: " + getNLLLoss(probs, dataset.y))
 
   // backward
-  let dLogits = mElemwise((a, b) => (a - b), probs, dataset.y)
-  let dw2 = mMatMul(mTranspose(a1), dLogits)
+  let dh2 = mElemwise((a, b) => (a - b), probs, dataset.y)
+  let dw2 = mMatMul(mTranspose(a1), dh2)
   // tricky way to sum along the second axis
-  let db2 = mTranspose(mTranspose(dLogits).map(x => [x.reduce((a, b) => (a + b))]))
+  let db2 = mTranspose(mTranspose(dh2).map(x => [x.reduce((a, b) => (a + b))]))
 
-  let da1 = mMatMul(dLogits, mTranspose(params.w2))
-  let dh1 = mElemwise(x => x > 0 ? 1 : 0, da1)
+  let da1 = mMatMul(dh2, mTranspose(params.w2))
+  let dh1 = mElemwise((g, x) => x > 0 ? g : 0, da1, h1)
   let dw1 = mMatMul(mTranspose(dataset.x), dh1)
   let db1 = mTranspose(mTranspose(dh1).map(x => [x.reduce((a, b) => (a + b))]))
   // gradient descent
-  params.w1 = mElemwise((a, b) => (a - leanringRate * b), params.w1, dw1)
-  params.b1 = mElemwise((a, b) => (a - leanringRate * b), params.b1, db1)
-  params.w2 = mElemwise((a, b) => (a - leanringRate * b), params.w2, dw2)
-  params.b2 = mElemwise((a, b) => (a - leanringRate * b), params.b2, db2)
+  params.w1 = mElemwise((a, b) => (a - LR * b), params.w1, dw1)
+  params.b1 = mElemwise((a, b) => (a - LR * b), params.b1, db1)
+  params.w2 = mElemwise((a, b) => (a - LR * b), params.w2, dw2)
+  params.b2 = mElemwise((a, b) => (a - LR * b), params.b2, db2)
 }
 
 function evaluate(params: Params, dataset: Dataset) {
@@ -234,28 +216,33 @@ function evaluate(params: Params, dataset: Dataset) {
   let precision: number = predLabels
       .map((pred, i) => Number(pred === trueLabels[i]))
       .reduce((a, b) => (a + b)) / numSamples
-  console.log(`precisionn: ${precision}`)
+  let loss = getNLLLoss(probs, dataset.y)
+  console.log(`precision=${precision.toFixed(6)}, loss=${loss.toFixed(6)}`)
 }
 
-// training
-let params = getInitParams(4, 3, 20)
-let dataset = prepareDataset()
-let batchSize = 30
-let trainSize = dataset.train.x.length
+function main() {
+  // timing
+  const startTime = performance.now();
 
-const leanringRate = 0.0003
-const numEpochs = 1000
-//const numEpochs = 1
-for (let ep = 0; ep < numEpochs; ep++) {
-  for (let b = 0; b < trainSize / batchSize; b++) {
-    let batch = {
-      x: dataset.train.x.filter((_, idx) => (idx >= b*batchSize) && (idx < (b+1)*batchSize)),
-      y: dataset.train.y.filter((_, idx) => (idx >= b*batchSize) && (idx < (b+1)*batchSize))
+  // training
+  let params = getInitParams(IN_DIM, OUT_DIM, HIDDEN_DIM);
+  let dataset = prepareDataset();
+  let trainSize = dataset.train.x.length;
+
+  for (let ep = 0; ep < N_EPOCH; ep++) {
+    for (let b = 0; b < trainSize / BS; b++) {
+      let batch = {
+        x: dataset.train.x.filter((_, idx) => (idx >= b*BS) && (idx < (b+1)*BS)),
+        y: dataset.train.y.filter((_, idx) => (idx >= b*BS) && (idx < (b+1)*BS))
+      };
+      train_step(params, batch);
     }
-    train(params, batch)
   }
-  if (ep % 100 == 0) {
-    console.log(`epoch ${ep}`)
-    evaluate(params, dataset.test)
-  }
+  evaluate(params, dataset.test);
+
+  // timing
+  const endTime = performance.now();
+  console.log(`time=${(endTime - startTime).toFixed(4)} ms`);
 }
+
+main();

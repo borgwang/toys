@@ -1,1 +1,1 @@
-ts-node nn.ts
+npx tsx nn.ts
